@@ -1,0 +1,16 @@
+---
+description: v0.dev 기반의 UI 컴포넌트 표준과 디자인 시스템을 정의합니다.
+globs: components/**/*.tsx, app/**/*.tsx
+---
+# Style & UI Standards
+
+## Visual Identity
+- **Concept**: v0.dev 기반의 표준 컴포넌트를 사용하여 깔끔하고 전문적인 엔지니어링 감성을 유지합니다.
+
+## Layout Rules (PRD 기반)
+- **Dashboard**: 상단에 3개의 Stat Cards(전체 글, 유저 수 등)를 반드시 배치합니다.
+- **Post Card**: 제목보다 `ai_summary`를 상단에 배치하여 유저의 정보 습득 비용을 낮춥니다.
+- **Detail Page**: 기술 태그는 `Badge` 컴포넌트로 강조하고, 하단에 Floating Action Button(연락처 연결)을 배치합니다.
+
+## Empty States
+- 데이터가 없을 경우 @build-hight-ai_PRD.pdf 에 명시된 "첫 번째 프로젝트의 주인공이 되어보세요!" 메시지를 출력합니다.

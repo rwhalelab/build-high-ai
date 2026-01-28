@@ -1,0 +1,19 @@
+---
+alwaysApply: true
+---
+
+---
+description: Next.js 15(App Router) 및 Supabase에 대한 기술적 표준을 정의합니다.
+globs: **/*.ts, **/*.tsx
+---
+# Tech Architecture (Standard from cursor.directory)
+
+## Next.js 15 Standards
+- **Server Components**: 데이터 페칭은 기본적으로 Server Components에서 수행합니다.
+- **Turbopack**: 개발 시 Turbopack 호환성을 고려하여 코드를 작성합니다.
+- **Error Handling**: `error.tsx`와 `loading.tsx`를 사용하여 선언적 UI 상태 관리를 수행합니다.
+
+## Supabase & Security
+- **RLS (Row Level Security)**: 모든 테이블에 RLS를 활성화하고, 작성자 본인만 수정/삭제할 수 있는 정책을 강제합니다.
+- **Auth**: `Supabase Auth` 구글 로그인 흐름을 사용하며, 유저 식별은 `auth.uid()`를 기준으로 합니다.
+- **Type Safety**: 데이터베이스 스키마에 대한 TypeScript 타입을 생성하여 적용합니다.

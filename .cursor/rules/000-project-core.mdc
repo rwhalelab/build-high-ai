@@ -1,0 +1,14 @@
+---
+alwaysApply: true
+---
+
+---
+description: 프로젝트의 핵심 기획(PRD) 및 사용자 흐름(FLOW) 준수 규칙
+globs: **/*
+---
+
+# Project Core Principles
+- 모든 개발의 최우선 순위는 `docs/PRD.md`와 `docs/FLOW.md`이다.
+- 코드를 생성하거나 수정하기 전, 해당 기능이 기획서의 어떤 부분에 해당하는지 반드시 명시한다.
+- 유저 인터랙션 로직은 `docs/FLOW.md`의 다이어그램 흐름을 절대적으로 따른다.
+- 기획서에 명시되지 않은 기능을 임의로 추가하지 말 것.
