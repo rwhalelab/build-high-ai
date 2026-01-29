@@ -12,8 +12,13 @@ export async function GET(request: NextRequest) {
   const code = requestUrl.searchParams.get('code');
 
   if (code) {
-    const supabase = createClient();
-    await supabase.auth.exchangeCodeForSession(code);
+    const supabase = await createClient();
+    if (supabase) {
+      await supabase.auth.exchangeCodeForSession(code);
+    } else {
+      // Supabase 클라이언트가 없으면 (환경 변수 미설정) 에러 페이지로 리다이렉트
+      return NextResponse.redirect(new URL('/login?error=supabase_not_configured', request.url));
+    }
   }
 
   // 인증 성공 시 대시보드로 리다이렉트

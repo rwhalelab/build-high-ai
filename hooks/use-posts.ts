@@ -20,6 +20,14 @@ export function usePosts() {
   const fetchPosts = async () => {
     try {
       setLoading(true);
+      
+      // Supabase 클라이언트가 없으면 (환경 변수 미설정) 빈 배열로 처리
+      if (!supabase) {
+        setPosts([]);
+        setLoading(false);
+        return;
+      }
+
       const { data, error } = await supabase
         .from('posts')
         .select('*')

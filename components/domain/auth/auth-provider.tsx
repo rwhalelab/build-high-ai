@@ -26,6 +26,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const supabase = createClient();
 
   useEffect(() => {
+    // Supabase 클라이언트가 없으면 (환경 변수 미설정) 로딩 완료 처리만 수행
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
+
     // 초기 세션 확인
     supabase.auth.getSession().then(({ data: { session } }) => {
       setUser(session?.user ?? null);

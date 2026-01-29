@@ -20,6 +20,14 @@ export function useProfile() {
   const fetchProfile = async () => {
     try {
       setLoading(true);
+      
+      // Supabase 클라이언트가 없으면 (환경 변수 미설정) 빈 프로필로 처리
+      if (!supabase) {
+        setProfile(null);
+        setLoading(false);
+        return;
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         setProfile(null);
@@ -48,6 +56,11 @@ export function useProfile() {
   // 프로필 업데이트
   const updateProfile = async (updates: Partial<Profile>) => {
     try {
+      // Supabase 클라이언트가 없으면 (환경 변수 미설정) 에러 반환
+      if (!supabase) {
+        throw new Error('Supabase 환경 변수가 설정되지 않았습니다.');
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error('인증되지 않았습니다.');
 

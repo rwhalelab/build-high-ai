@@ -13,7 +13,15 @@ import { generateSummaryAndTags } from '@/lib/ai/gemini';
 
 export async function POST(request: NextRequest) {
   try {
-    const supabase = createClient();
+    const supabase = await createClient();
+    
+    // Supabase 클라이언트가 없으면 (환경 변수 미설정) 에러 반환
+    if (!supabase) {
+      return NextResponse.json(
+        { error: 'Supabase 환경 변수가 설정되지 않았습니다.' },
+        { status: 503 }
+      );
+    }
     
     // 인증 확인
     const { data: { user } } = await supabase.auth.getUser();
