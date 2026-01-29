@@ -22,10 +22,13 @@ export function GoogleSignInButton() {
     try {
       setLoading(true);
 
+      // 환경변수에서 NEXTAUTH_URL 가져오기 (없으면 window.location.origin 사용)
+      const baseUrl = process.env.NEXT_PUBLIC_NEXTAUTH_URL || window.location.origin;
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/api/auth/callback`,
+          redirectTo: `${baseUrl}/api/auth/callback`,
           queryParams: {
             prompt: 'select_account', // 계정 선택 화면을 항상 표시하여 다른 계정으로 로그인 가능하도록
           },
