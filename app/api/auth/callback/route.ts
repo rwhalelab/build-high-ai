@@ -60,9 +60,10 @@ export async function GET(request: NextRequest) {
       });
     }
 
-    // 인증 성공 시 대시보드로 리다이렉트
+    // 인증 성공 시 메인 페이지로 리다이렉트
     // 트리거가 자동으로 profiles 레코드를 생성함
-    return NextResponse.redirect(new URL('/(dashboard)', request.url));
+    // Note: (dashboard)는 라우트 그룹이므로 URL에 포함되지 않음. 루트 경로(/)로 리다이렉트
+    return NextResponse.redirect(new URL('/', request.url));
   } catch (err) {
     console.error('예상치 못한 오류:', err);
     return NextResponse.redirect(

@@ -12,6 +12,7 @@ import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { PostWithAuthor } from '@/types/post';
 
 interface PostDetailPageProps {
   params: Promise<{ id: string }>;
@@ -27,7 +28,7 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
     const mockPost = {
       id,
       title: 'AI 기반 이커머스 플랫폼 개발',
-      category: 'Development',
+      category: 'Development' as const,
       content: `# 프로젝트 소개
 
 이 프로젝트는 Next.js 기반의 AI 추천 시스템을 갖춘 이커머스 플랫폼을 개발하는 프로젝트입니다.
@@ -48,11 +49,12 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
 - Prisma
 - OpenAI API
 - Tailwind CSS`,
-      summary: 'Next.js 기반 쇼핑 플랫폼 구축, AI 상품 추천 시스템 적용, 프론트/백엔드 개발자 모집',
+      summary: ['Next.js 기반 쇼핑 플랫폼 구축', 'AI 상품 추천 시스템 적용', '프론트/백엔드 개발자 모집'],
       tags: ['Next.js', 'TypeScript', 'Prisma', 'OpenAI', 'Tailwind'],
       contact: 'discord.gg/example',
       author_id: 'mock-user-id',
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       author: {
         id: 'mock-user-id',
         username: 'Alex Kim',
@@ -69,7 +71,7 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
           <ArrowLeft className="h-4 w-4" />
           목록으로 돌아가기
         </Link>
-        <PostDetail post={mockPost as any} />
+        <PostDetail post={mockPost as PostWithAuthor & { applicationCount?: number }} />
       </div>
     );
   }
@@ -131,7 +133,7 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
         <ArrowLeft className="h-4 w-4" />
         목록으로 돌아가기
       </Link>
-      <PostDetail post={{ ...post, applicationCount } as any} />
+      <PostDetail post={{ ...post, applicationCount } as PostWithAuthor & { applicationCount?: number }} />
     </div>
   );
 }

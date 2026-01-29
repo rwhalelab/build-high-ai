@@ -90,7 +90,10 @@ export function useApplicationsRealtime(options: UseApplicationsRealtimeOptions 
         console.log('지원 상태 Realtime 구독 상태:', status);
       });
 
-    setChannel(realtimeChannel);
+    // 비동기로 처리하여 렌더링 사이클 문제 방지
+    Promise.resolve().then(() => {
+      setChannel(realtimeChannel);
+    });
 
     // 클린업: 구독 해제
     return () => {

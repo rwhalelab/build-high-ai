@@ -12,8 +12,6 @@ interface AISummaryPreviewProps {
 }
 
 export function AISummaryPreview({
-  summary,
-  tags,
   isLoading,
 }: AISummaryPreviewProps) {
   // TODO: AI 처리 중 로딩 상태 표시

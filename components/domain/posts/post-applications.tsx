@@ -41,7 +41,7 @@ interface PostApplicationsProps {
 export function PostApplications({ postId, authorId }: PostApplicationsProps) {
   const { user } = useAuth();
   const { codes: statusCodes } = useCommonCodes('BH_ST_APPLICATION');
-  const { success, error: showError, info } = useToast();
+  const { success, error: showError } = useToast();
   const [applications, setApplications] = useState<Application[]>([]);
   const [loading, setLoading] = useState(true);
   const [isApplying, setIsApplying] = useState(false);
@@ -73,6 +73,7 @@ export function PostApplications({ postId, authorId }: PostApplicationsProps) {
     if (user) {
       fetchApplications();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [postId, user]);
 
   // 지원하기

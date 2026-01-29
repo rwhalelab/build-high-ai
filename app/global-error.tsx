@@ -9,7 +9,7 @@
 
 import { useEffect } from 'react';
 import { ErrorScreen } from '@/components/domain/shared/error-screen';
-import { handleApiError, getErrorType } from '@/lib/utils/api-error-handler';
+import { handleApiError } from '@/lib/utils/api-error-handler';
 
 interface GlobalErrorProps {
   error: Error & { digest?: string };
@@ -22,7 +22,6 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
     console.error('Global error:', error);
   }, [error]);
 
-  const errorType = getErrorType(error);
   const errorMessage = handleApiError(error);
 
   return (

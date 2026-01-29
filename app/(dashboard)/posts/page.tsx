@@ -8,6 +8,7 @@
 
 import { createClient } from '@/lib/supabase/server';
 import { redirect } from 'next/navigation';
+import Link from 'next/link';
 import { PostCard } from '@/components/domain/posts/post-card';
 import { PostWithAuthor } from '@/types/post';
 
@@ -98,7 +99,7 @@ export default async function PostsPage({ searchParams }: PostsPageProps) {
         
         {/* 필터 UI (향후 구현) */}
         <div className="flex gap-2 mb-4">
-          <a
+          <Link
             href="/posts"
             className={`px-4 py-2 rounded-lg border transition-colors ${
               !params.category
@@ -107,8 +108,8 @@ export default async function PostsPage({ searchParams }: PostsPageProps) {
             }`}
           >
             전체
-          </a>
-          <a
+          </Link>
+          <Link
             href="/posts?category=Development"
             className={`px-4 py-2 rounded-lg border transition-colors ${
               params.category === 'Development'
@@ -117,8 +118,8 @@ export default async function PostsPage({ searchParams }: PostsPageProps) {
             }`}
           >
             개발
-          </a>
-          <a
+          </Link>
+          <Link
             href="/posts?category=Study"
             className={`px-4 py-2 rounded-lg border transition-colors ${
               params.category === 'Study'
@@ -127,8 +128,8 @@ export default async function PostsPage({ searchParams }: PostsPageProps) {
             }`}
           >
             스터디
-          </a>
-          <a
+          </Link>
+          <Link
             href="/posts?category=Project"
             className={`px-4 py-2 rounded-lg border transition-colors ${
               params.category === 'Project'
@@ -137,7 +138,7 @@ export default async function PostsPage({ searchParams }: PostsPageProps) {
             }`}
           >
             프로젝트
-          </a>
+          </Link>
         </div>
       </div>
 
@@ -158,19 +159,19 @@ export default async function PostsPage({ searchParams }: PostsPageProps) {
       {posts && posts.length === pageSize && (
         <div className="mt-8 flex justify-center gap-2">
           {page > 1 && (
-            <a
+            <Link
               href={`/posts?page=${page - 1}${params.category ? `&category=${params.category}` : ''}`}
               className="px-4 py-2 rounded-lg border hover:bg-muted"
             >
               이전
-            </a>
+            </Link>
           )}
-          <a
+          <Link
             href={`/posts?page=${page + 1}${params.category ? `&category=${params.category}` : ''}`}
             className="px-4 py-2 rounded-lg border hover:bg-muted"
           >
             다음
-          </a>
+          </Link>
         </div>
       )}
     </div>

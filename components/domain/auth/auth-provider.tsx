@@ -29,7 +29,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // Supabase 클라이언트가 없으면 (환경 변수 미설정) 로딩 완료 처리만 수행
     if (!supabase) {
-      setLoading(false);
+      // 비동기로 처리하여 렌더링 사이클 문제 방지
+      Promise.resolve().then(() => {
+        setLoading(false);
+      });
       return;
     }
 

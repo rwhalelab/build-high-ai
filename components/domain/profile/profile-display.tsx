@@ -6,7 +6,6 @@
  */
 
 import { createClient } from '@/lib/supabase/server';
-import { Profile } from '@/types/profile';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { User } from 'lucide-react';
@@ -39,64 +38,13 @@ export async function ProfileDisplay({ userId }: ProfileDisplayProps) {
     );
   }
 
-  try {
-    const { data: profile, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', userId)
-      .single();
+  const { data: profile, error } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', userId)
+    .single();
 
-    if (error || !profile) {
-      return (
-        <div className="flex items-center gap-3">
-          <Avatar>
-            <AvatarFallback>
-              <User className="w-4 h-4" />
-            </AvatarFallback>
-          </Avatar>
-          <div>
-            <p className="font-medium text-sm">알 수 없음</p>
-            <p className="text-xs text-muted-foreground">프로필을 찾을 수 없습니다</p>
-          </div>
-        </div>
-      );
-    }
-
-    const displayName = profile.username || '사용자';
-    const initials = displayName
-      .split(' ')
-      .map((n: string) => n[0])
-      .join('')
-      .toUpperCase()
-      .slice(0, 2) || 'U';
-
-    return (
-      <div className="flex items-center gap-3">
-        <Avatar>
-          <AvatarImage src={profile.avatar_url || undefined} alt={displayName} />
-          <AvatarFallback>{initials}</AvatarFallback>
-        </Avatar>
-        <div className="flex-1 min-w-0">
-          <p className="font-medium text-sm truncate">{displayName}</p>
-          {profile.tech_stack && profile.tech_stack.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1">
-              {profile.tech_stack.slice(0, 3).map((tech: string, index: number) => (
-                <Badge key={index} variant="secondary" className="text-xs">
-                  {tech}
-                </Badge>
-              ))}
-              {profile.tech_stack.length > 3 && (
-                <Badge variant="secondary" className="text-xs">
-                  +{profile.tech_stack.length - 3}
-                </Badge>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    );
-  } catch (err) {
-    console.error('프로필 표시 오류:', err);
+  if (error || !profile) {
     return (
       <div className="flex items-center gap-3">
         <Avatar>
@@ -105,10 +53,44 @@ export async function ProfileDisplay({ userId }: ProfileDisplayProps) {
           </AvatarFallback>
         </Avatar>
         <div>
-          <p className="font-medium text-sm">오류</p>
-          <p className="text-xs text-muted-foreground">프로필을 불러오는 중 오류가 발생했습니다</p>
+          <p className="font-medium text-sm">알 수 없음</p>
+          <p className="text-xs text-muted-foreground">프로필을 찾을 수 없습니다</p>
         </div>
       </div>
     );
   }
+
+  const displayName = profile.username || '사용자';
+  const initials = displayName
+    .split(' ')
+    .map((n: string) => n[0])
+    .join('')
+    .toUpperCase()
+    .slice(0, 2) || 'U';
+
+  return (
+    <div className="flex items-center gap-3">
+      <Avatar>
+        <AvatarImage src={profile.avatar_url || undefined} alt={displayName} />
+        <AvatarFallback>{initials}</AvatarFallback>
+      </Avatar>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-sm truncate">{displayName}</p>
+        {profile.tech_stack && profile.tech_stack.length > 0 && (
+          <div className="flex flex-wrap gap-1 mt-1">
+            {profile.tech_stack.slice(0, 3).map((tech: string, index: number) => (
+              <Badge key={index} variant="secondary" className="text-xs">
+                {tech}
+              </Badge>
+            ))}
+            {profile.tech_stack.length > 3 && (
+              <Badge variant="secondary" className="text-xs">
+                +{profile.tech_stack.length - 3}
+              </Badge>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
 }

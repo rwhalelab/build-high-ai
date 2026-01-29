@@ -1,7 +1,6 @@
 'use client';
 
 import { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { Toast } from './toast';
 import { Toaster } from './toaster';
 
 export interface ToastData {
@@ -29,6 +28,10 @@ const TOAST_DURATION = 5000;
 export function ToastProvider({ children }: { children: ReactNode }) {
   const [toasts, setToasts] = useState<ToastData[]>([]);
 
+  const removeToast = useCallback((id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
+
   const addToast = useCallback((toast: Omit<ToastData, 'id'>) => {
     const id = Math.random().toString(36).substring(2, 9);
     const newToast: ToastData = {
@@ -47,11 +50,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }
 
     return id;
-  }, []);
-
-  const removeToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((toast) => toast.id !== id));
-  }, []);
+  }, [removeToast]);
 
   const success = useCallback(
     (title: string, description?: string) => {

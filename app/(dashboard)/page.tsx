@@ -45,11 +45,6 @@ async function getDashboardStats(): Promise<DashboardStats> {
     // 주간 활성 유저 (최근 7일간 고유 user_id COUNT)
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
-    const { count: weeklyActiveUsers } = await supabase
-      .from('user_activities')
-      .select('user_id', { count: 'exact', head: false })
-      .gte('created_at', sevenDaysAgo.toISOString());
 
     // 고유 user_id 개수 계산
     const { data: activities } = await supabase
