@@ -2,16 +2,26 @@
  * 게시글 CRUD 훅
  * 
  * 게시글 조회, 생성, 삭제를 위한 커스텀 훅
+ * 필터링 및 페이지네이션 지원
  */
 
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Post } from '@/types/post';
+import { Post, PostWithAuthor } from '@/types/post';
 import { createClient } from '@/lib/supabase/client';
 
-export function usePosts() {
-  const [posts, setPosts] = useState<Post[]>([]);
+interface UsePostsOptions {
+  category?: 'Development' | 'Study' | 'Project';
+  tags?: string[];
+  authorId?: string;
+  page?: number;
+  pageSize?: number;
+}
+
+export function usePosts(options: UsePostsOptions = {}) {
+  const { category, tags, authorId, page = 1, pageSize = 10 } = options;
+  const [posts, setPosts] = useState<PostWithAuthor[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const supabase = createClient();
@@ -20,6 +30,7 @@ export function usePosts() {
   const fetchPosts = async () => {
     try {
       setLoading(true);
+      setError(null);
       
       // Supabase 클라이언트가 없으면 (환경 변수 미설정) 빈 배열로 처리
       if (!supabase) {
@@ -28,15 +39,48 @@ export function usePosts() {
         return;
       }
 
-      const { data, error } = await supabase
+      // 쿼리 빌더 시작
+      let query = supabase
         .from('posts')
-        .select('*')
+        .select(`
+          *,
+          author:profiles!posts_author_id_fkey (
+            id,
+            username,
+            avatar_url
+          )
+        `)
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
-      setPosts(data || []);
+      // 필터링: category
+      if (category && ['Development', 'Study', 'Project'].includes(category)) {
+        query = query.eq('category', category);
+      }
+
+      // 필터링: tags (배열 검색)
+      if (tags && tags.length > 0) {
+        // 각 태그에 대해 OR 조건 사용
+        query = query.or(tags.map((tag) => `tags.cs.{${tag}}`).join(','));
+      }
+
+      // 필터링: author_id
+      if (authorId) {
+        query = query.eq('author_id', authorId);
+      }
+
+      // 페이지네이션
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+      query = query.range(from, to);
+
+      const { data, error: fetchError } = await query;
+
+      if (fetchError) throw fetchError;
+      setPosts((data || []) as PostWithAuthor[]);
     } catch (err) {
+      console.error('게시글 조회 오류:', err);
       setError(err as Error);
+      setPosts([]);
     } finally {
       setLoading(false);
     }
@@ -44,7 +88,7 @@ export function usePosts() {
 
   useEffect(() => {
     fetchPosts();
-  }, []);
+  }, [category, tags?.join(','), authorId, page, pageSize]);
 
   // 게시글 생성
   const createPost = async (postData: {
@@ -100,5 +144,6 @@ export function usePosts() {
     fetchPosts,
     createPost,
     deletePost,
+    refetch: fetchPosts,
   };
 }

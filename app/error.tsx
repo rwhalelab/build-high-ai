@@ -9,6 +9,7 @@
 
 import { useEffect } from 'react';
 import { ErrorScreen } from '@/components/domain/shared/error-screen';
+import { handleApiError, getErrorType } from '@/lib/utils/api-error-handler';
 
 interface ErrorProps {
   error: Error & { digest?: string };
@@ -21,10 +22,29 @@ export default function Error({ error, reset }: ErrorProps) {
     console.error('Route error:', error);
   }, [error]);
 
+  const errorType = getErrorType(error);
+  const errorMessage = handleApiError(error);
+
+  // 에러 타입별 제목 설정
+  const getErrorTitle = () => {
+    switch (errorType) {
+      case 'network':
+        return '네트워크 오류';
+      case 'auth':
+        return '인증 오류';
+      case 'database':
+        return '데이터베이스 오류';
+      case 'validation':
+        return '입력값 오류';
+      default:
+        return '페이지를 불러올 수 없습니다';
+    }
+  };
+
   return (
     <ErrorScreen
-      title="페이지를 불러올 수 없습니다"
-      message="요청하신 페이지를 표시하는 중 오류가 발생했습니다. 잠시 후 다시 시도해주세요."
+      title={getErrorTitle()}
+      message={errorMessage}
       onRetry={reset}
     />
   );

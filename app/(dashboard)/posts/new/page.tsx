@@ -18,6 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils/cn";
+import { useToast } from "@/components/ui/toast-provider";
 import {
   Sparkles,
   Lightbulb,
@@ -47,6 +48,7 @@ const aiTips = [
 
 export default function NewPostPage() {
   const router = useRouter();
+  const { success, error: showError } = useToast();
   const [category, setCategory] = useState("");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -105,11 +107,17 @@ export default function NewPostPage() {
         throw new Error(error.error || "게시글 생성 실패");
       }
 
+      // 성공 토스트 표시
+      success("게시글 작성 완료", "게시글이 성공적으로 작성되었습니다.");
+      
       // 성공 시 대시보드로 리다이렉트
-      router.push("/");
+      setTimeout(() => {
+        router.push("/");
+      }, 500);
     } catch (error) {
       console.error("Error creating post:", error);
-      alert(error instanceof Error ? error.message : "게시글 생성 중 오류가 발생했습니다");
+      const errorMessage = error instanceof Error ? error.message : "게시글 생성 중 오류가 발생했습니다";
+      showError("게시글 작성 실패", errorMessage);
     } finally {
       setIsSubmitting(false);
       setAiStatus("ready");

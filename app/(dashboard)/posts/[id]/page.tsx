@@ -80,7 +80,7 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
     redirect('/login');
   }
 
-  // 게시글 데이터 페칭 (작성자 프로필 정보 포함)
+  // 게시글 데이터 페칭 (작성자 프로필 정보 및 지원 수 포함)
   const { data: post, error: postError } = await supabase
     .from('posts')
     .select(`
@@ -94,6 +94,16 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
     .eq('id', id)
     .single();
 
+  // 지원 수 조회
+  let applicationCount = 0;
+  if (post) {
+    const { count } = await supabase
+      .from('post_applications')
+      .select('*', { count: 'exact', head: true })
+      .eq('post_id', id);
+    applicationCount = count || 0;
+  }
+
   if (postError || !post) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
@@ -101,7 +111,7 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
           <h2 className="text-2xl font-bold mb-2">게시글을 찾을 수 없습니다</h2>
           <p className="text-muted-foreground mb-4">요청하신 게시글이 존재하지 않거나 삭제되었습니다.</p>
           <Link
-            href="/"
+            href="/posts"
             className="inline-flex items-center gap-2 text-primary hover:underline"
           >
             <ArrowLeft className="h-4 w-4" />
@@ -115,13 +125,13 @@ export default async function PostDetailPage({ params }: PostDetailPageProps) {
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <Link
-        href="/"
+        href="/posts"
         className="mb-6 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
         <ArrowLeft className="h-4 w-4" />
         목록으로 돌아가기
       </Link>
-      <PostDetail post={post} />
+      <PostDetail post={{ ...post, applicationCount } as any} />
     </div>
   );
 }

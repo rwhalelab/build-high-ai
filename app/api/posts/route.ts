@@ -10,6 +10,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { generateSummaryAndTags } from '@/lib/ai/gemini';
+import { logActivity } from '@/lib/utils/activity-logger';
 
 export async function POST(request: NextRequest) {
   try {
@@ -61,6 +62,12 @@ export async function POST(request: NextRequest) {
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
+
+    // 활동 로그 기록 (비동기, 논블로킹)
+    logActivity(user.id, 'post_create', {
+      post_id: data.id,
+      post_title: title,
+    });
 
     return NextResponse.json({ data }, { status: 201 });
   } catch (error) {

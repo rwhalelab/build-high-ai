@@ -9,6 +9,7 @@
 
 import { useEffect } from 'react';
 import { ErrorScreen } from '@/components/domain/shared/error-screen';
+import { handleApiError, getErrorType } from '@/lib/utils/api-error-handler';
 
 interface GlobalErrorProps {
   error: Error & { digest?: string };
@@ -21,12 +22,15 @@ export default function GlobalError({ error, reset }: GlobalErrorProps) {
     console.error('Global error:', error);
   }, [error]);
 
+  const errorType = getErrorType(error);
+  const errorMessage = handleApiError(error);
+
   return (
     <html lang="ko">
       <body>
         <ErrorScreen
           title="시스템 오류가 발생했습니다"
-          message="애플리케이션에서 심각한 오류가 발생했습니다. 페이지를 새로고침하거나 잠시 후 다시 시도해주세요."
+          message={errorMessage || '애플리케이션에서 심각한 오류가 발생했습니다. 페이지를 새로고침하거나 잠시 후 다시 시도해주세요.'}
           onRetry={reset}
         />
       </body>
