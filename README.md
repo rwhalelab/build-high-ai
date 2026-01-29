@@ -50,13 +50,65 @@ pnpm install
 
 ### 2. 환경 변수 설정
 
-`.env.local.example`을 참고하여 `.env.local` 파일을 생성하고 다음 변수들을 설정하세요:
+프로젝트는 두 가지 환경변수 파일을 사용합니다:
 
+#### 로컬 개발 환경 설정
+
+**1단계: `.env.local` 파일 생성**
+```bash
+# .env.local.example을 참고하여 .env.local 파일 생성
+cp .env.local.example .env.local
+```
+
+`.env.local` 파일에는 다음 변수들을 설정하세요:
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-GEMINI_API_KEY=your_gemini_api_key
+SUPABASE_SERVICE_ROLE=your_supabase_service_role_key
+SUPABASE_PROJECT_ID=your_supabase_project_id
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_api_key
+NEXTAUTH_SECRET=your_nextauth_secret
 ```
+
+**2단계: `.env.development.local` 파일 생성**
+```bash
+# .env.development.local.example을 참고하여 .env.development.local 파일 생성
+cp .env.development.local.example .env.development.local
+```
+
+`.env.development.local` 파일은 이미 localhost 설정이 되어 있으므로 수정할 필요 없습니다:
+```env
+NEXTAUTH_URL=http://localhost:3000
+NEXT_PUBLIC_NEXTAUTH_URL=http://localhost:3000
+```
+
+**중요**: `.env.development.local`이 최우선순위이므로, `.env.development`에 Vercel URL이 있어도 로컬에서는 항상 localhost를 사용합니다.
+
+#### 개발/운영 환경 (`.env.development`)
+Vercel 등 개발/운영 환경에서 사용하는 설정입니다. Next.js가 자동으로 로드합니다.
+
+```bash
+# .env.development.example을 참고하여 .env.development 파일 생성
+cp .env.development.example .env.development
+```
+
+`.env.development` 파일에는 운영 환경 URL을 포함한 모든 변수를 설정하세요:
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+GOOGLE_GENERATIVE_AI_API_KEY=your_gemini_api_key
+NEXTAUTH_URL=https://your-domain.vercel.app
+NEXT_PUBLIC_NEXTAUTH_URL=https://your-domain.vercel.app
+NEXTAUTH_SECRET=your_nextauth_secret
+```
+
+**Vercel 배포 시**: `.env.development` 파일의 값들을 Vercel 대시보드의 환경변수로 설정하세요.
+
+자세한 내용은 [환경변수 설정 가이드](./docs/ENV_SETUP.md)를 참고하세요.
 
 ### 3. Supabase 설정
 

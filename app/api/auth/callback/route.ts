@@ -8,31 +8,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { logActivity } from '@/lib/utils/activity-logger';
-
-/**
- * Base URL을 가져오는 헬퍼 함수
- * 환경변수를 우선 사용하고, 없을 경우 request headers에서 호스트 정보를 가져옴
- */
-function getBaseUrl(request: NextRequest): string {
-  // 환경변수에서 base URL 가져오기 (우선순위: NEXTAUTH_URL > NEXT_PUBLIC_NEXTAUTH_URL)
-  const baseUrl = process.env.NEXTAUTH_URL || process.env.NEXT_PUBLIC_NEXTAUTH_URL;
-  
-  if (baseUrl) {
-    return baseUrl;
-  }
-  
-  // 환경변수가 없으면 request headers에서 호스트 정보 가져오기
-  const host = request.headers.get('host');
-  const protocol = request.headers.get('x-forwarded-proto') || 'https';
-  
-  if (host) {
-    return `${protocol}://${host}`;
-  }
-  
-  // 최후의 수단으로 request.url 사용 (개발 환경용)
-  const url = new URL(request.url);
-  return `${url.protocol}//${url.host}`;
-}
+import { getServerBaseUrl } from '@/lib/utils/url';
 
 export async function GET(request: NextRequest) {
   const requestUrl = new URL(request.url);
@@ -40,8 +16,8 @@ export async function GET(request: NextRequest) {
   const error = requestUrl.searchParams.get('error');
   const errorDescription = requestUrl.searchParams.get('error_description');
   
-  // Base URL 가져오기
-  const baseUrl = getBaseUrl(request);
+  // Base URL 가져오기 (개발/운영 환경 자동 구분)
+  const baseUrl = getServerBaseUrl(request);
 
   // OAuth 에러가 있는 경우
   if (error) {
