@@ -8,6 +8,7 @@
 
 import { useState } from 'react';
 import { createClient } from '@/lib/supabase/client';
+import { getClientBaseUrl } from '@/lib/utils/url';
 
 export function GoogleSignInButton() {
   const [loading, setLoading] = useState(false);
@@ -22,13 +23,20 @@ export function GoogleSignInButton() {
     try {
       setLoading(true);
 
-      // 환경변수에서 NEXTAUTH_URL 가져오기 (없으면 window.location.origin 사용)
-      const baseUrl = process.env.NEXT_PUBLIC_NEXTAUTH_URL || window.location.origin;
+      // Base URL 가져오기 (로컬/운영 환경 자동 구분)
+      const baseUrl = getClientBaseUrl();
+      const redirectTo = `${baseUrl}/api/auth/callback`;
       
-      const { error } = await supabase.auth.signInWithOAuth({
+      // 디버깅 로그 출력 (항상 출력하여 확인 가능)
+      console.log('OAuth 리다이렉트 URL:', redirectTo);
+      console.log('Base URL:', baseUrl);
+      console.log('현재 호스트:', window.location.hostname);
+      console.log('환경:', window.location.hostname === 'localhost' ? '로컬' : '운영');
+      
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${baseUrl}/api/auth/callback`,
+          redirectTo: redirectTo,
           queryParams: {
             prompt: 'select_account', // 계정 선택 화면을 항상 표시하여 다른 계정으로 로그인 가능하도록
           },
@@ -38,6 +46,10 @@ export function GoogleSignInButton() {
       if (error) {
         console.error('Google 로그인 오류:', error);
         // TODO: 에러 핸들링 (토스트 알림 등)
+      } else if (data?.url) {
+        // OAuth URL이 생성되면 리다이렉트
+        // Supabase가 생성한 URL로 리다이렉트 (이 URL이 Google OAuth를 포함)
+        window.location.href = data.url;
       }
     } catch (err) {
       console.error('예상치 못한 오류:', err);
