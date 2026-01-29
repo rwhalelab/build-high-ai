@@ -62,7 +62,10 @@ CREATE TABLE posts (
   content TEXT NOT NULL, -- 본문 내용
   summary TEXT[], -- AI가 생성한 3줄 요약 (배열)
   tags JSONB, -- AI가 추출한 기술 태그 (예: ["React", "TypeScript", "Next.js", "Supabase", "Tailwind"])
-  contact TEXT, -- 외부 연락처 링크 (선택)
+  contact TEXT, -- 외부 연락처 링크 (선택, 하위 호환성 유지)
+  phone TEXT, -- 전화번호 (선택)
+  email TEXT, -- 이메일 주소 (선택)
+  contact_url TEXT, -- 연락처 URL (Discord, Telegram 등, 선택)
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -82,7 +85,10 @@ CREATE INDEX idx_posts_tags ON posts USING GIN(tags); -- JSONB 인덱스
 - `content`: 본문 내용 (마크다운 지원 가능)
 - `summary`: AI가 생성한 3줄 요약 배열 (TEXT[])
 - `tags`: AI가 추출한 기술 태그 (JSONB 배열)
-- `contact`: 외부 연락처 링크 (선택)
+- `contact`: 외부 연락처 링크 (선택, 하위 호환성 유지 - 향후 제거 예정)
+- `phone`: 전화번호 (선택)
+- `email`: 이메일 주소 (선택)
+- `contact_url`: 연락처 URL (Discord, Telegram 등, 선택)
 - `created_at`, `updated_at`: 생성/수정 시간
 
 **제약 조건:**
@@ -90,6 +96,98 @@ CREATE INDEX idx_posts_tags ON posts USING GIN(tags); -- JSONB 인덱스
 - `category`: ENUM 값만 허용
 - `summary`: AI 처리 후 자동 생성 (최대 3개 요소)
 - `tags`: AI 처리 후 자동 생성 (최대 5개 요소)
+
+---
+
+### 3. `common_code_master` 테이블
+
+**역할**: 공통 코드 마스터 정보 저장 (시스템 전역에서 사용되는 코드 그룹)
+
+```sql
+CREATE TABLE common_code_master (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code VARCHAR(50) NOT NULL UNIQUE, -- 마스터 코드 (예: BH_ST_APPLICATION)
+  name VARCHAR(100) NOT NULL, -- 마스터 코드명 (예: 신청 상태)
+  description TEXT, -- 설명
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- updated_at 자동 업데이트 트리거
+CREATE TRIGGER update_common_code_master_updated_at
+  BEFORE UPDATE ON common_code_master
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- 인덱스
+CREATE INDEX idx_common_code_master_code ON common_code_master(code);
+```
+
+**주요 컬럼 설명:**
+- `id`: 마스터 코드 고유 식별자 (UUID)
+- `code`: 마스터 코드 (예: `BH_ST_APPLICATION`, `BH_USER_ROLE`)
+- `name`: 마스터 코드명 (예: "신청 상태", "유저 권한")
+- `description`: 마스터 코드 설명
+- `created_at`, `updated_at`: 생성/수정 시간
+
+**예시 데이터:**
+- `BH_ST_APPLICATION`: 신청 상태
+- `BH_USER_ROLE`: 유저 권한
+
+---
+
+### 4. `common_code_detail` 테이블
+
+**역할**: 공통 코드 상세 정보 저장 (마스터 코드에 속하는 개별 코드 값)
+
+```sql
+CREATE TABLE common_code_detail (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  master_code VARCHAR(50) NOT NULL REFERENCES common_code_master(code) ON DELETE CASCADE,
+  code VARCHAR(50) NOT NULL, -- 상세 코드 (예: PENDING)
+  name VARCHAR(100) NOT NULL, -- 상세 코드명 (예: 대기중)
+  description TEXT, -- 설명
+  sort_order INTEGER DEFAULT 0, -- 정렬 순서
+  is_active BOOLEAN DEFAULT TRUE, -- 사용 여부
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(master_code, code) -- 마스터 코드와 상세 코드 조합은 유일해야 함
+);
+
+-- updated_at 자동 업데이트 트리거
+CREATE TRIGGER update_common_code_detail_updated_at
+  BEFORE UPDATE ON common_code_detail
+  FOR EACH ROW
+  EXECUTE FUNCTION update_updated_at_column();
+
+-- 인덱스
+CREATE INDEX idx_common_code_detail_master_code ON common_code_detail(master_code);
+CREATE INDEX idx_common_code_detail_code ON common_code_detail(code);
+CREATE INDEX idx_common_code_detail_is_active ON common_code_detail(is_active);
+CREATE INDEX idx_common_code_detail_sort_order ON common_code_detail(master_code, sort_order);
+```
+
+**주요 컬럼 설명:**
+- `id`: 상세 코드 고유 식별자 (UUID)
+- `master_code`: 마스터 코드 참조 (외래 키)
+- `code`: 상세 코드 (예: `PENDING`, `APPROVED`, `REJECTED`)
+- `name`: 상세 코드명 (예: "대기중", "승인됨", "거절됨")
+- `description`: 상세 코드 설명
+- `sort_order`: 정렬 순서 (낮을수록 먼저 표시)
+- `is_active`: 사용 여부 (false인 경우 비활성화)
+- `created_at`, `updated_at`: 생성/수정 시간
+
+**예시 데이터:**
+- `BH_ST_APPLICATION` 마스터의 상세 코드:
+  - `PENDING`: 대기중
+  - `APPROVED`: 승인됨
+  - `REJECTED`: 거절됨
+  - `WITHDRAWN`: 철회됨
+- `BH_USER_ROLE` 마스터의 상세 코드:
+  - `ADMIN`: 관리자
+  - `MEMBER`: 일반 회원
+  - `GUEST`: 게스트
+  - `PREMIUM`: 프리미엄 회원
 
 ---
 
@@ -170,6 +268,46 @@ CREATE POLICY "Authors can delete own posts"
 - 모든 인증된 사용자는 게시글 조회 가능 (공개 게시판)
 - 게시글 작성은 인증된 사용자만 가능하며, `author_id`는 자동으로 현재 사용자로 설정
 - 게시글 수정/삭제는 작성자만 가능
+
+---
+
+### `common_code_master` 테이블 RLS
+
+```sql
+-- RLS 활성화
+ALTER TABLE common_code_master ENABLE ROW LEVEL SECURITY;
+
+-- 정책 1: 모든 인증된 사용자는 공통 코드 마스터 조회 가능 (읽기 전용)
+CREATE POLICY "Authenticated users can view common code masters"
+  ON common_code_master
+  FOR SELECT
+  TO authenticated
+  USING (true);
+```
+
+**보안 원칙:**
+- 모든 인증된 사용자는 공통 코드 마스터 조회 가능 (읽기 전용)
+- 생성/수정/삭제는 관리자 권한 필요 (향후 구현)
+
+---
+
+### `common_code_detail` 테이블 RLS
+
+```sql
+-- RLS 활성화
+ALTER TABLE common_code_detail ENABLE ROW LEVEL SECURITY;
+
+-- 정책 1: 모든 인증된 사용자는 공통 코드 상세 조회 가능 (읽기 전용)
+CREATE POLICY "Authenticated users can view common code details"
+  ON common_code_detail
+  FOR SELECT
+  TO authenticated
+  USING (true);
+```
+
+**보안 원칙:**
+- 모든 인증된 사용자는 공통 코드 상세 조회 가능 (읽기 전용)
+- 생성/수정/삭제는 관리자 권한 필요 (향후 구현)
 
 ---
 
@@ -273,20 +411,25 @@ WHERE EXISTS (
 ```
 supabase/
 ├── migrations/
-│   ├── 20240101000000_create_profiles.sql
-│   ├── 20240101000001_create_posts.sql
-│   ├── 20240101000002_setup_rls_policies.sql
-│   └── 20240101000003_create_triggers.sql
-└── seed.sql (선택: 개발용 시드 데이터)
+│   ├── 20250129000000_create_profiles.sql
+│   ├── 20250129000001_create_posts.sql
+│   ├── 20250129000007_create_common_codes.sql
+│   ├── 20250129000008_update_contact_fields.sql ⭐ NEW
+│   ├── 20250129000006_setup_rls_policies.sql
+│   └── 20250129000005_create_triggers.sql
+└── docs/seed_data.sql (선택: 개발용 시드 데이터)
 ```
 
 ### 마이그레이션 실행 순서
 
 1. `profiles` 테이블 생성
 2. `posts` 테이블 생성
-3. 인덱스 생성
-4. RLS 정책 설정
-5. 트리거 및 함수 생성
+3. `common_code_master` 테이블 생성
+4. `common_code_detail` 테이블 생성
+5. `posts` 테이블 연락처 필드 세분화 (phone, email, contact_url 추가)
+6. 인덱스 생성
+7. RLS 정책 설정
+8. 트리거 및 함수 생성
 
 ---
 

@@ -1,0 +1,473 @@
+"use client";
+
+/**
+ * 게시글 수정 페이지
+ * 
+ * - 기존 게시글 데이터를 불러와 폼에 표시
+ * - 제목, 카테고리, 본문, 연락처 수정 가능
+ * - 저장 시 AI 재처리 및 DB 업데이트
+ */
+
+import { useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils/cn";
+import { useToast } from "@/components/ui/toast-provider";
+import {
+  Sparkles,
+  Lightbulb,
+  AlertCircle,
+  CheckCircle2,
+  Loader2,
+  FileText,
+  Code,
+  BookOpen,
+  Rocket,
+  Link as LinkIcon,
+  Save,
+  ArrowLeft,
+  Phone,
+  Mail,
+  Globe,
+} from "lucide-react";
+import Link from "next/link";
+import { PostWithAuthor } from "@/types/post";
+
+const categories = [
+  { value: "development", label: "Development", icon: Code },
+  { value: "study", label: "Study", icon: BookOpen },
+  { value: "project", label: "Project", icon: Rocket },
+];
+
+const aiTips = [
+  "모집하고자 하는 기술 스택을 구체적으로 명시하세요",
+  "예상 기간과 참여 수준을 언급하세요",
+  "프로젝트의 목표와 비전을 명확히 설명하세요",
+  "팀 문화나 작업 스타일에 대한 정보를 포함하세요",
+];
+
+export default function EditPostPage() {
+  const router = useRouter();
+  const params = useParams();
+  const postId = params.id as string;
+  const { success, error: showError } = useToast();
+  
+  const [category, setCategory] = useState("");
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [phone, setPhone] = useState("");
+  const [email, setEmail] = useState("");
+  const [contactUrl, setContactUrl] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [aiStatus, setAiStatus] = useState<"idle" | "ready" | "analyzing">("idle");
+  const [titleError, setTitleError] = useState("");
+
+  // 게시글 데이터 불러오기
+  useEffect(() => {
+    const fetchPost = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(`/api/posts/${postId}`);
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "게시글을 불러올 수 없습니다.");
+        }
+
+        const { data } = await response.json();
+        const post = data as PostWithAuthor;
+
+        // 카테고리 변환 (Development -> development)
+        const categoryMap: Record<string, string> = {
+          'Development': 'development',
+          'Study': 'study',
+          'Project': 'project',
+        };
+
+        setTitle(post.title || "");
+        setCategory(categoryMap[post.category] || post.category.toLowerCase());
+        setContent(post.content || "");
+        setPhone(post.phone || "");
+        setEmail(post.email || "");
+        setContactUrl(post.contact_url || "");
+        
+        // AI 상태 설정
+        if (post.content && post.content.length > 50) {
+          setAiStatus("ready");
+        }
+      } catch (error) {
+        console.error("Error fetching post:", error);
+        const errorMessage = error instanceof Error ? error.message : "게시글을 불러오는 중 오류가 발생했습니다";
+        showError("게시글 불러오기 실패", errorMessage);
+        router.push(`/posts/${postId}`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (postId) {
+      fetchPost();
+    }
+  }, [postId, router, showError]);
+
+  // Update AI status based on content length
+  useEffect(() => {
+    if (content.length > 50) {
+      setAiStatus("ready");
+    } else {
+      setAiStatus("idle");
+    }
+  }, [content]);
+
+  // Validate title
+  useEffect(() => {
+    if (title.length > 0 && title.length < 5) {
+      setTitleError("제목은 최소 5자 이상이어야 합니다");
+    } else {
+      setTitleError("");
+    }
+  }, [title]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (title.length < 5) {
+      setTitleError("제목은 최소 5자 이상이어야 합니다");
+      return;
+    }
+
+    if (!category) {
+      return;
+    }
+
+    setIsSubmitting(true);
+    setAiStatus("analyzing");
+
+    try {
+      const response = await fetch(`/api/posts/${postId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title,
+          category,
+          content,
+          phone: phone.trim() || undefined,
+          email: email.trim() || undefined,
+          contact_url: contactUrl.trim() || undefined,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "게시글 수정 실패");
+      }
+
+      // 성공 토스트 표시
+      success("게시글 수정 완료", "게시글이 성공적으로 수정되었습니다.");
+      
+      // 성공 시 게시글 상세 페이지로 리다이렉트
+      setTimeout(() => {
+        router.push(`/posts/${postId}`);
+      }, 500);
+    } catch (error) {
+      console.error("Error updating post:", error);
+      const errorMessage = error instanceof Error ? error.message : "게시글 수정 중 오류가 발생했습니다";
+      showError("게시글 수정 실패", errorMessage);
+    } finally {
+      setIsSubmitting(false);
+      setAiStatus("ready");
+    }
+  };
+
+  const isFormValid = category && title.length >= 5 && content.length > 50 && (phone.trim() || email.trim() || contactUrl.trim());
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="container mx-auto px-4 py-8 max-w-6xl">
+      <div className="mb-8">
+        <Link
+          href={`/posts/${postId}`}
+          className="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          게시글 상세로 돌아가기
+        </Link>
+        <h1 className="text-3xl font-bold text-foreground">게시글 수정</h1>
+        <p className="mt-2 text-muted-foreground">
+          게시글 정보를 수정하고 AI가 다시 분석합니다.
+        </p>
+      </div>
+
+      <form onSubmit={handleSubmit}>
+        <div className="grid gap-8 lg:grid-cols-3">
+          {/* Form Section - 2/3 width */}
+          <div className="lg:col-span-2">
+            <Card className="p-6">
+              <div className="space-y-6">
+                {/* Category Selection */}
+                <div className="space-y-2">
+                  <Label htmlFor="category">카테고리</Label>
+                  <div className="flex gap-2">
+                    {categories.map((cat) => {
+                      const Icon = cat.icon;
+                      const isSelected = category === cat.value;
+                      return (
+                        <button
+                          key={cat.value}
+                          type="button"
+                          onClick={() => setCategory(cat.value)}
+                          className={cn(
+                            "flex items-center gap-2 rounded-lg border px-4 py-2 text-sm font-medium transition-colors",
+                            isSelected
+                              ? "border-primary bg-primary/10 text-primary"
+                              : "border-border bg-background text-muted-foreground hover:bg-accent"
+                          )}
+                        >
+                          <Icon className="h-4 w-4" />
+                          {cat.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Title Input */}
+                <div className="space-y-2">
+                  <Label htmlFor="title">
+                    제목
+                    <span className="ml-1 text-xs text-muted-foreground">(최소 5자 이상)</span>
+                  </Label>
+                  <Input
+                    id="title"
+                    placeholder="프로젝트 제목을 입력하세요"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    className={cn(titleError && "border-destructive")}
+                  />
+                  {titleError && (
+                    <p className="flex items-center gap-1 text-sm text-destructive">
+                      <AlertCircle className="h-3 w-3" />
+                      {titleError}
+                    </p>
+                  )}
+                </div>
+
+                {/* Content Textarea */}
+                <div className="space-y-2">
+                  <Label htmlFor="content">
+                    본문
+                    <span className="ml-1 text-xs text-muted-foreground">(마크다운 지원)</span>
+                  </Label>
+                  <Textarea
+                    id="content"
+                    placeholder={`프로젝트 상세 정보를 입력하세요:
+
+- 어떤 프로젝트인가요?
+- 어떤 기술 스택이 필요한가요?
+- 예상 기간은 얼마나 되나요?
+- 팀 문화나 작업 스타일은 어떤가요?`}
+                    value={content}
+                    onChange={(e) => setContent(e.target.value)}
+                    className="min-h-[300px] resize-none font-mono text-sm"
+                  />
+                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                    <span>{content.length}자</span>
+                    <span>
+                      {content.length >= 50 ? (
+                        <span className="flex items-center gap-1 text-green-400">
+                          <CheckCircle2 className="h-3 w-3" />
+                          AI 분석 준비 완료
+                        </span>
+                      ) : (
+                        <span>AI 분석을 위해 최소 50자 이상 입력하세요</span>
+                      )}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Contact Fields */}
+                <div className="space-y-4">
+                  <Label>연락처 정보</Label>
+                  
+                  {/* Phone */}
+                  <div className="space-y-2">
+                    <Label htmlFor="phone" className="text-sm text-muted-foreground">
+                      전화번호 (선택)
+                    </Label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="010-1234-5678"
+                        value={phone}
+                        onChange={(e) => setPhone(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Email */}
+                  <div className="space-y-2">
+                    <Label htmlFor="email" className="text-sm text-muted-foreground">
+                      이메일 (선택)
+                    </Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="example@email.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Contact URL */}
+                  <div className="space-y-2">
+                    <Label htmlFor="contactUrl" className="text-sm text-muted-foreground">
+                      연락처 URL (선택)
+                    </Label>
+                    <div className="relative">
+                      <Globe className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                      <Input
+                        id="contactUrl"
+                        type="url"
+                        placeholder="https://discord.gg/... 또는 https://t.me/..."
+                        value={contactUrl}
+                        onChange={(e) => setContactUrl(e.target.value)}
+                        className="pl-10"
+                      />
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Discord, Telegram, 카카오톡 오픈채팅 등
+                    </p>
+                  </div>
+                </div>
+
+                {/* Submit Button */}
+                <Button
+                  type="submit"
+                  disabled={!isFormValid || isSubmitting}
+                  className="w-full gap-2"
+                  size="lg"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      AI 분석 중...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      수정 완료
+                    </>
+                  )}
+                </Button>
+              </div>
+            </Card>
+          </div>
+
+          {/* AI Guide Sidebar - 1/3 width */}
+          <div className="space-y-6">
+            {/* AI Status Card */}
+            <Card>
+              <div className="border-b border-border bg-primary/5 px-5 py-4">
+                <div className="flex items-center gap-2">
+                  <div
+                    className={cn(
+                      "flex h-8 w-8 items-center justify-center rounded-lg",
+                      aiStatus === "analyzing"
+                        ? "bg-primary animate-pulse"
+                        : aiStatus === "ready"
+                          ? "bg-green-500/20"
+                          : "bg-secondary"
+                    )}
+                  >
+                    <Sparkles
+                      className={cn(
+                        "h-4 w-4",
+                        aiStatus === "analyzing"
+                          ? "text-primary-foreground"
+                          : aiStatus === "ready"
+                            ? "text-green-400"
+                            : "text-muted-foreground"
+                      )}
+                    />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-foreground">AI 가이드</h3>
+                    <p className="text-xs text-muted-foreground">
+                      {aiStatus === "analyzing"
+                        ? "내용 분석 중..."
+                        : aiStatus === "ready"
+                          ? "분석 준비 완료"
+                          : "내용 입력 대기 중..."}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="p-5">
+                <p className="mb-4 text-sm text-muted-foreground">
+                  게시글을 수정하면 AI가 자동으로:
+                </p>
+                <ul className="space-y-3">
+                  <li className="flex items-start gap-2">
+                    <FileText className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <span className="text-sm text-foreground">
+                      3줄 요약을 재생성하여 빠른 개요 제공
+                    </span>
+                  </li>
+                  <li className="flex items-start gap-2">
+                    <Code className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
+                    <span className="text-sm text-foreground">
+                      핵심 기술 스택 태그 5개 재추출
+                    </span>
+                  </li>
+                </ul>
+              </div>
+            </Card>
+
+            {/* Writing Tips */}
+            <Card className="p-5">
+              <div className="mb-4 flex items-center gap-2">
+                <Lightbulb className="h-5 w-5 text-amber-400" />
+                <h3 className="font-semibold text-foreground">작성 팁</h3>
+              </div>
+              <ul className="space-y-3">
+                {aiTips.map((tip, index) => (
+                  <li
+                    key={index}
+                    className="flex items-start gap-2 text-sm text-muted-foreground"
+                  >
+                    <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded bg-primary/10 text-xs font-medium text-primary">
+                      {index + 1}
+                    </span>
+                    {tip}
+                  </li>
+                ))}
+              </ul>
+            </Card>
+          </div>
+        </div>
+      </form>
+    </div>
+  );
+}
