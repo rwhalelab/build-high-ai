@@ -2,9 +2,9 @@
 alwaysApply: true
 ---
 
---/*
+--
 description: 프로젝트 변경 사항 및 의존성 추가에 대한 자동 히스토리 기록 규칙
-globs: */---
+--
 
 # History Logging Rules
 - 새로운 라이브러리를 설치(`pnpm add`)하거나, 시스템 아키텍처에 큰 변화가 있을 경우 반드시 기록을 남긴다.

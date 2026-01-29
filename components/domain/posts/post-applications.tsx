@@ -14,7 +14,8 @@ import { useAuth } from '@/hooks/use-auth';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Check, X, UserMinus, Users } from 'lucide-react';
+import { Check, X, UserMinus, Users, Clock, CheckCircle2, XCircle, MinusCircle } from 'lucide-react';
+import { cn } from '@/lib/utils/cn';
 import { useCommonCodes, getCodeName } from '@/hooks/use-common-codes';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/components/ui/toast-provider';
@@ -49,6 +50,37 @@ export function PostApplications({ postId, authorId }: PostApplicationsProps) {
 
   const isAuthor = user?.id === authorId;
   const hasApplied = applications.some((app) => app.applicant_id === user?.id);
+
+  // 지원 상태별 스타일 및 아이콘
+  const getStatusStyle = (status: string) => {
+    switch (status) {
+      case 'accepted':
+        return {
+          className: 'bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30',
+          icon: CheckCircle2,
+          label: '승인됨',
+        };
+      case 'rejected':
+        return {
+          className: 'bg-red-500/20 text-red-600 dark:text-red-400 border-red-500/30',
+          icon: XCircle,
+          label: '거절됨',
+        };
+      case 'withdrawn':
+        return {
+          className: 'bg-gray-500/20 text-gray-600 dark:text-gray-400 border-gray-500/30',
+          icon: MinusCircle,
+          label: '철회됨',
+        };
+      case 'pending':
+      default:
+        return {
+          className: 'bg-amber-500/20 text-amber-600 dark:text-amber-400 border-amber-500/30',
+          icon: Clock,
+          label: '대기 중',
+        };
+    }
+  };
 
   // 지원 목록 조회
   const fetchApplications = async () => {
@@ -163,10 +195,23 @@ export function PostApplications({ postId, authorId }: PostApplicationsProps) {
             <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="font-medium">지원 상태</p>
-                  <Badge variant="secondary" className="mt-1">
-                    {statusName}
-                  </Badge>
+                  <p className="font-medium mb-2">지원 상태</p>
+                  {(() => {
+                    const statusStyle = getStatusStyle(myApplication?.status || 'pending');
+                    const StatusIcon = statusStyle.icon;
+                    return (
+                      <Badge 
+                        variant="outline" 
+                        className={cn(
+                          "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold border-2",
+                          statusStyle.className
+                        )}
+                      >
+                        <StatusIcon className="h-3.5 w-3.5" />
+                        {statusName}
+                      </Badge>
+                    );
+                  })()}
                 </div>
                 {myApplication?.status === 'pending' && (
                   <Button
@@ -256,7 +301,22 @@ export function PostApplications({ postId, authorId }: PostApplicationsProps) {
                         </div>
                       )}
                     </div>
-                    <Badge variant="secondary">{statusName}</Badge>
+                    {(() => {
+                      const statusStyle = getStatusStyle(application.status);
+                      const StatusIcon = statusStyle.icon;
+                      return (
+                        <Badge 
+                          variant="outline" 
+                          className={cn(
+                            "inline-flex items-center gap-1.5 px-3 py-1.5 text-sm font-semibold border-2 shrink-0",
+                            statusStyle.className
+                          )}
+                        >
+                          <StatusIcon className="h-3.5 w-3.5" />
+                          {statusName}
+                        </Badge>
+                      );
+                    })()}
                   </div>
                   {application.status === 'pending' && (
                     <div className="flex gap-2 ml-4">

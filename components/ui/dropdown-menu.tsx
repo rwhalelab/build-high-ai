@@ -71,7 +71,7 @@ export function DropdownMenuTrigger({
   };
 
   if (asChild && React.isValidElement(children)) {
-    return React.cloneElement(children, {
+    return React.cloneElement(children as React.ReactElement<any>, {
       ...(children.props as Record<string, unknown>),
       onClick: (e: React.MouseEvent) => {
         (children.props as { onClick?: (e: React.MouseEvent) => void })?.onClick?.(e);
@@ -124,7 +124,7 @@ export function DropdownMenuItem({
 
   if (asChild && React.isValidElement(children)) {
     const childProps = children.props as Record<string, unknown> & { className?: string; onClick?: (e: React.MouseEvent) => void };
-    return React.cloneElement(children, {
+    return React.cloneElement(children as React.ReactElement<any>, {
       ...childProps,
       onClick: (e: React.MouseEvent) => {
         childProps.onClick?.(e);

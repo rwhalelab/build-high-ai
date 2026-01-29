@@ -88,6 +88,7 @@ export function usePosts(options: UsePostsOptions = {}) {
 
   useEffect(() => {
     fetchPosts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, tags?.join(','), authorId, page, pageSize]);
 
   // 게시글 생성

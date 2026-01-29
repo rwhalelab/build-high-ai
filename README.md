@@ -27,9 +27,17 @@ build-high-ai/
 │   └── utils/            # 유틸리티 함수
 ├── hooks/                 # 커스텀 훅
 ├── types/                 # TypeScript 타입 정의
-└── docs/                  # 문서
-    ├── tech-stack.md     # 기술 명세서
-    └── db-schema.md      # 데이터베이스 설계 가이드
+├── docs/                  # 문서
+│   ├── PRD.md            # 제품 요구사항 정의서
+│   ├── FLOW.md           # 서비스 흐름도
+│   ├── functional_flow.md # 기능적 흐름 리스트
+│   ├── tech-stack.md     # 기술 명세서
+│   ├── db-schema.md      # 데이터베이스 설계 가이드
+│   ├── db-schema-final.md # 데이터베이스 최종 스키마
+│   ├── SUPABASE_UPDATE_GUIDE.md # Supabase 업데이트 가이드
+│   └── seed_data.sql     # 시드 데이터
+└── supabase/
+    └── migrations/       # 데이터베이스 마이그레이션 파일
 ```
 
 ## 🛠️ 시작하기
@@ -53,8 +61,12 @@ GEMINI_API_KEY=your_gemini_api_key
 ### 3. Supabase 설정
 
 1. [Supabase](https://supabase.com)에서 새 프로젝트 생성
-2. `docs/db-schema.md`를 참고하여 데이터베이스 스키마 생성
-3. Google OAuth 제공자 설정 (인증 > 제공자 > Google)
+2. 데이터베이스 스키마 설정:
+   - [Supabase 업데이트 가이드](./docs/SUPABASE_UPDATE_GUIDE.md)를 참고하여 마이그레이션 실행
+   - 또는 `docs/db-schema-final.md`를 참고하여 수동으로 스키마 생성
+3. Google OAuth 제공자 설정:
+   - Supabase Dashboard → Authentication → Providers → Google
+   - Google Cloud Console에서 OAuth 클라이언트 ID 및 Secret 설정
 
 ### 4. 개발 서버 실행
 
@@ -66,10 +78,20 @@ pnpm dev
 
 ## 📚 문서
 
+### 핵심 문서
+- [PRD (제품 요구사항 정의서)](./docs/PRD.md)
+- [FLOW (서비스 흐름도)](./docs/FLOW.md)
+- [기능적 흐름 리스트](./docs/functional_flow.md)
+
+### 기술 문서
 - [기술 스택 명세서](./docs/tech-stack.md)
 - [데이터베이스 설계 가이드](./docs/db-schema.md)
-- [PRD](./PRD.md)
-- [FLOW](./FLOW.md)
+- [데이터베이스 최종 스키마](./docs/db-schema-final.md)
+- [Supabase 업데이트 가이드](./docs/SUPABASE_UPDATE_GUIDE.md)
+
+### 개발 문서
+- [로드맵](./docs/roadmap.md)
+- [시드 데이터](./docs/seed_data.sql)
 
 ## 🏗️ 개발 가이드
 
@@ -96,21 +118,53 @@ npx supabase gen types typescript --project-id <project-id> > types/database.ts
 - 컴포넌트: PascalCase
 - 함수/변수: camelCase
 
-## 📝 Phase 1 구현 목표
+## 📝 구현 현황
 
+### Phase 1: Foundation ✅
 - [x] 프로젝트 구조 설계
-- [ ] Supabase 인증 (Google OAuth)
-- [ ] 프로필 관리 (기술 스택 등록/수정)
-- [ ] 게시글 CRUD (AI 요약/태그 자동 생성)
-- [ ] 메인 대시보드 (통계 카드, 게시글 리스트)
-- [ ] 상세 페이지
+- [x] Supabase 인증 (Google OAuth)
+- [x] 공통 코드 조회 유틸리티
+- [x] 프로필 기본 조회 및 표시
+
+### Phase 2: Core Logic ✅
+- [x] 게시글 목록 조회 및 필터링
+- [x] 게시글 상세 조회 및 조회수 추적
+- [x] 게시글 생성 (AI 처리 포함)
+- [x] 게시글 수정 및 삭제
+- [x] 프로필 수정
+- [x] 게시글 지원 (Application) CRUD
+
+### Phase 3: Interaction & Feedback ✅
+- [x] 사용자 활동 로그 자동 기록
+- [x] 통계 데이터 조회 및 표시
+- [x] 에러 핸들링 및 사용자 피드백
+- [x] 로딩 상태 관리
+- [x] 실시간 업데이트
+
+자세한 구현 현황은 [기능적 흐름 리스트](./docs/functional_flow.md)를 참고하세요.
 
 ## 🔒 보안
 
-- Row Level Security (RLS) 정책으로 데이터 접근 제어
-- 환경 변수로 민감 정보 관리
-- 서버 사이드 세션 검증
+- **Row Level Security (RLS)**: 모든 테이블에 RLS 정책 적용으로 데이터 접근 제어
+- **환경 변수**: 민감 정보는 `.env.local`에서 관리 (Git에 커밋하지 않음)
+- **서버 사이드 세션 검증**: 모든 API Route에서 세션 검증 수행
+- **인증**: Google OAuth를 통한 안전한 인증 플로우
+
+자세한 보안 정책은 [DBA 정책 문서](./docs/DBA_POLICY.md)를 참고하세요.
+
+## 🤝 기여하기
+
+1. 이 저장소를 포크합니다
+2. 기능 브랜치를 생성합니다 (`git checkout -b feature/amazing-feature`)
+3. 변경사항을 커밋합니다 (`git commit -m 'Add some amazing feature'`)
+4. 브랜치에 푸시합니다 (`git push origin feature/amazing-feature`)
+5. Pull Request를 생성합니다
 
 ## 📄 라이선스
 
-MIT
+이 프로젝트는 MIT 라이선스 하에 배포됩니다.
+
+---
+
+**작성일**: 2025-01-29  
+**최종 업데이트**: 2025-01-29

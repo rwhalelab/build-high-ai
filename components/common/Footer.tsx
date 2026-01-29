@@ -38,7 +38,7 @@ export function Footer() {
           </nav>
         </div>
         <p className="mt-6 text-center text-xs text-muted-foreground sm:text-left">
-          © {year} Build-High. 엔지니어를 위한 스터디 및 프로젝트 팀 빌딩 플랫폼.
+          © 2026 JWhaleLab Build-High. 엔지니어를 위한 스터디 및 프로젝트 팀 빌딩 플랫폼.
         </p>
       </div>
     </footer>

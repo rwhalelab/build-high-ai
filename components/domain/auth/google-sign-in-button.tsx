@@ -26,6 +26,9 @@ export function GoogleSignInButton() {
         provider: 'google',
         options: {
           redirectTo: `${window.location.origin}/api/auth/callback`,
+          queryParams: {
+            prompt: 'select_account', // 계정 선택 화면을 항상 표시하여 다른 계정으로 로그인 가능하도록
+          },
         },
       });
 

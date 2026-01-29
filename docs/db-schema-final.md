@@ -53,7 +53,10 @@ CREATE TABLE posts (
   content TEXT NOT NULL,
   summary TEXT[], -- AI가 생성한 3줄 요약
   tags TEXT[], -- AI가 추출한 기술 태그 배열
-  contact TEXT,
+  contact TEXT, -- 외부 연락처 링크 (선택, 하위 호환성 유지 - 향후 제거 예정)
+  phone TEXT, -- 전화번호 (선택)
+  email TEXT, -- 이메일 주소 (선택)
+  contact_url TEXT, -- 연락처 URL (Discord, Telegram 등, 선택)
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -67,7 +70,10 @@ CREATE TABLE posts (
 - `content`: 본문 내용 (마크다운 지원)
 - `summary`: AI가 생성한 3줄 요약 배열 (TEXT[])
 - `tags`: AI가 추출한 기술 태그 배열 (TEXT[]) - **JSONB에서 TEXT[]로 변경**
-- `contact`: 외부 연락처 링크 (선택)
+- `contact`: 외부 연락처 링크 (선택, 하위 호환성 유지 - 향후 제거 예정)
+- `phone`: 전화번호 (선택)
+- `email`: 이메일 주소 (선택)
+- `contact_url`: 연락처 URL (Discord, Telegram 등, 선택)
 
 **인덱스:**
 - `idx_posts_author_id`: 작성자별 조회 최적화
@@ -360,8 +366,9 @@ ORDER BY view_count DESC;
 4. `20250129000003_create_post_applications.sql`
 5. `20250129000004_create_user_activities.sql`
 6. `20250129000007_create_common_codes.sql`
-7. `20250129000005_create_triggers.sql`
-8. `20250129000006_setup_rls_policies.sql`
+7. `20250129000008_update_contact_fields.sql` ⭐ NEW (posts 테이블 연락처 필드 세분화)
+8. `20250129000005_create_triggers.sql`
+9. `20250129000006_setup_rls_policies.sql`
 
 자세한 실행 방법은 `supabase/migrations/README.md`를 참조하세요.
 
@@ -371,7 +378,8 @@ ORDER BY view_count DESC;
 
 ### 주요 변경점
 1. **tags 필드 타입 변경**: `JSONB` → `TEXT[]` (코드에서 string[]로 사용하므로)
-2. **새로운 테이블 추가**: 
+2. **contact 필드 세분화**: `contact TEXT` → `phone TEXT`, `email TEXT`, `contact_url TEXT` (기존 contact 필드는 하위 호환성 유지)
+3. **새로운 테이블 추가**: 
    - `post_views` - 조회수 추적
    - `post_applications` - 지원/매칭 내역
    - `user_activities` - 사용자 활동 로그

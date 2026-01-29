@@ -2,12 +2,13 @@
 
 ## 📋 개요
 
-이 문서는 이미 Supabase에 적용된 데이터베이스 스키마에 **공통 코드 테이블**을 추가하는 방법을 안내합니다.
+이 문서는 이미 Supabase에 적용된 데이터베이스 스키마에 **공통 코드 테이블**을 추가하고 **posts 테이블의 연락처 필드를 세분화**하는 방법을 안내합니다.
 
 **업데이트 대상:**
 - ✅ `common_code_master` 테이블 (신규)
 - ✅ `common_code_detail` 테이블 (신규)
 - ✅ 공통 코드 테이블에 대한 RLS 정책 (신규)
+- ✅ `posts` 테이블 연락처 필드 세분화 (`phone`, `email`, `contact_url` 추가)
 
 ---
 
@@ -178,6 +179,72 @@ ON CONFLICT (master_code, code) DO NOTHING;
 3. **Run** 버튼 클릭하여 실행
 4. ✅ 성공 메시지 확인
 
+#### Step 4: posts 테이블 연락처 필드 세분화
+
+1. **SQL Editor**에서 **New Query** 클릭
+2. 아래 SQL을 복사하여 실행:
+
+```sql
+-- ============================================
+-- Build-High Database Schema Migration
+-- Update: posts 테이블 연락처 필드 세분화
+-- Description: contact 필드를 phone, email, contact_url로 분리
+-- ============================================
+
+-- 기존 contact 컬럼을 백업용으로 유지하면서 새 컬럼 추가
+ALTER TABLE posts 
+  ADD COLUMN IF NOT EXISTS phone TEXT,
+  ADD COLUMN IF NOT EXISTS email TEXT,
+  ADD COLUMN IF NOT EXISTS contact_url TEXT;
+
+-- 기존 contact 데이터를 contact_url로 마이그레이션 (URL 형식인 경우)
+-- 이메일 형식은 email로, 전화번호 형식은 phone으로 분류
+UPDATE posts 
+SET 
+  contact_url = CASE 
+    WHEN contact IS NOT NULL AND (contact LIKE 'http://%' OR contact LIKE 'https://%' OR contact LIKE 'discord.gg/%' OR contact LIKE 't.me/%' OR contact LIKE 'www.%') 
+    THEN CASE 
+      WHEN contact LIKE 'http://%' OR contact LIKE 'https://%' THEN contact
+      WHEN contact LIKE 'discord.gg/%' THEN 'https://' || contact
+      WHEN contact LIKE 't.me/%' THEN 'https://' || contact
+      WHEN contact LIKE 'www.%' THEN 'https://' || contact
+      ELSE 'https://' || contact
+    END
+    ELSE NULL
+  END,
+  email = CASE 
+    WHEN contact IS NOT NULL AND contact LIKE '%@%' AND contact NOT LIKE 'http://%' AND contact NOT LIKE 'https://%'
+    THEN contact
+    ELSE NULL
+  END,
+  phone = CASE 
+    WHEN contact IS NOT NULL 
+      AND contact NOT LIKE '%@%' 
+      AND contact NOT LIKE 'http://%' 
+      AND contact NOT LIKE 'https://%'
+      AND contact NOT LIKE 'discord.gg/%'
+      AND contact NOT LIKE 't.me/%'
+      AND contact NOT LIKE 'www.%'
+      AND (contact ~ '^[0-9+\-() ]+$' OR contact ~ '^\+?[0-9]{10,}$')
+    THEN contact
+    ELSE NULL
+  END
+WHERE contact IS NOT NULL;
+
+-- 코멘트 추가
+COMMENT ON COLUMN posts.phone IS '전화번호 (선택)';
+COMMENT ON COLUMN posts.email IS '이메일 주소 (선택)';
+COMMENT ON COLUMN posts.contact_url IS '연락처 URL (Discord, Telegram 등, 선택)';
+
+-- 기존 contact 컬럼은 나중에 제거할 수 있도록 주석 처리
+-- ALTER TABLE posts DROP COLUMN contact;
+```
+
+3. **Run** 버튼 클릭하여 실행
+4. ✅ 성공 메시지 확인
+
+**참고**: 기존 `contact` 컬럼은 하위 호환성을 위해 유지됩니다. 향후 모든 데이터가 새 필드로 마이그레이션되면 제거할 수 있습니다.
+
 ---
 
 ### 방법 2: Supabase CLI 사용 (로컬 개발 환경)
@@ -211,6 +278,13 @@ supabase db push --include-all
 Supabase Dashboard → **Table Editor**에서 다음 테이블이 보이는지 확인:
 - ✅ `common_code_master`
 - ✅ `common_code_detail`
+
+### 1-1. posts 테이블 컬럼 확인
+
+Supabase Dashboard → **Table Editor** → `posts` 테이블에서 다음 컬럼이 추가되었는지 확인:
+- ✅ `phone` (TEXT, nullable)
+- ✅ `email` (TEXT, nullable)
+- ✅ `contact_url` (TEXT, nullable)
 
 ### 2. SQL로 확인
 
@@ -280,6 +354,30 @@ JOIN common_code_master ccm ON ccd.master_code = ccm.code
 ORDER BY ccd.master_code, ccd.sort_order;
 ```
 
+### 5. posts 테이블 연락처 필드 마이그레이션 확인
+
+```sql
+-- 연락처 필드 분류 결과 확인
+SELECT 
+  id,
+  title,
+  contact as old_contact,
+  phone,
+  email,
+  contact_url
+FROM posts
+WHERE contact IS NOT NULL
+LIMIT 10;
+
+-- 각 필드별 데이터 개수 확인
+SELECT 
+  COUNT(*) FILTER (WHERE phone IS NOT NULL) as phone_count,
+  COUNT(*) FILTER (WHERE email IS NOT NULL) as email_count,
+  COUNT(*) FILTER (WHERE contact_url IS NOT NULL) as contact_url_count,
+  COUNT(*) FILTER (WHERE contact IS NOT NULL) as old_contact_count
+FROM posts;
+```
+
 ---
 
 ## ⚠️ 주의사항
@@ -316,6 +414,8 @@ ORDER BY ccd.master_code, ccd.sort_order;
 
 만약 업데이트를 되돌려야 하는 경우:
 
+### 공통 코드 테이블 롤백
+
 ```sql
 -- RLS 정책 삭제
 DROP POLICY IF EXISTS "Authenticated users can view common code masters" ON common_code_master;
@@ -326,7 +426,17 @@ DROP TABLE IF EXISTS common_code_detail CASCADE;
 DROP TABLE IF EXISTS common_code_master CASCADE;
 ```
 
-**⚠️ 주의**: 테이블 삭제 시 모든 데이터가 영구적으로 삭제됩니다. 신중하게 진행하세요.
+### posts 테이블 연락처 필드 롤백
+
+```sql
+-- 새로 추가된 컬럼 삭제 (주의: 해당 필드의 데이터가 모두 삭제됩니다!)
+ALTER TABLE posts 
+  DROP COLUMN IF EXISTS phone,
+  DROP COLUMN IF EXISTS email,
+  DROP COLUMN IF EXISTS contact_url;
+```
+
+**⚠️ 주의**: 테이블/컬럼 삭제 시 모든 데이터가 영구적으로 삭제됩니다. 신중하게 진행하세요.
 
 ---
 
@@ -377,4 +487,5 @@ ALTER TABLE common_code_detail ENABLE ROW LEVEL SECURITY;
 ---
 
 **작성일**: 2025-01-29  
-**버전**: 1.0.0
+**버전**: 1.1.0  
+**마지막 업데이트**: 2025-01-29 (posts 테이블 연락처 필드 세분화 추가)

@@ -62,7 +62,10 @@ CREATE TABLE posts (
   content TEXT NOT NULL, -- 본문 내용
   summary TEXT[], -- AI가 생성한 3줄 요약 (배열)
   tags JSONB, -- AI가 추출한 기술 태그 (예: ["React", "TypeScript", "Next.js", "Supabase", "Tailwind"])
-  contact TEXT, -- 외부 연락처 링크 (선택)
+  contact TEXT, -- 외부 연락처 링크 (선택, 하위 호환성 유지)
+  phone TEXT, -- 전화번호 (선택)
+  email TEXT, -- 이메일 주소 (선택)
+  contact_url TEXT, -- 연락처 URL (Discord, Telegram 등, 선택)
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -82,7 +85,10 @@ CREATE INDEX idx_posts_tags ON posts USING GIN(tags); -- JSONB 인덱스
 - `content`: 본문 내용 (마크다운 지원 가능)
 - `summary`: AI가 생성한 3줄 요약 배열 (TEXT[])
 - `tags`: AI가 추출한 기술 태그 (JSONB 배열)
-- `contact`: 외부 연락처 링크 (선택)
+- `contact`: 외부 연락처 링크 (선택, 하위 호환성 유지 - 향후 제거 예정)
+- `phone`: 전화번호 (선택)
+- `email`: 이메일 주소 (선택)
+- `contact_url`: 연락처 URL (Discord, Telegram 등, 선택)
 - `created_at`, `updated_at`: 생성/수정 시간
 
 **제약 조건:**
@@ -408,6 +414,7 @@ supabase/
 │   ├── 20250129000000_create_profiles.sql
 │   ├── 20250129000001_create_posts.sql
 │   ├── 20250129000007_create_common_codes.sql
+│   ├── 20250129000008_update_contact_fields.sql ⭐ NEW
 │   ├── 20250129000006_setup_rls_policies.sql
 │   └── 20250129000005_create_triggers.sql
 └── docs/seed_data.sql (선택: 개발용 시드 데이터)
@@ -419,9 +426,10 @@ supabase/
 2. `posts` 테이블 생성
 3. `common_code_master` 테이블 생성
 4. `common_code_detail` 테이블 생성
-5. 인덱스 생성
-6. RLS 정책 설정
-7. 트리거 및 함수 생성
+5. `posts` 테이블 연락처 필드 세분화 (phone, email, contact_url 추가)
+6. 인덱스 생성
+7. RLS 정책 설정
+8. 트리거 및 함수 생성
 
 ---
 

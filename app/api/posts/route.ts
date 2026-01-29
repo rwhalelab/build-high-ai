@@ -31,12 +31,46 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { title, category, content, contact } = body;
+    const { title, category, content, phone, email, contact_url } = body;
 
     // 유효성 검사
     if (!title || title.length < 5) {
       return NextResponse.json(
         { error: '제목은 최소 5자 이상이어야 합니다.' },
+        { status: 400 }
+      );
+    }
+
+    // Category 검증 및 변환
+    const validCategories = ['Development', 'Study', 'Project'] as const;
+    const categoryMap: Record<string, typeof validCategories[number]> = {
+      'development': 'Development',
+      'study': 'Study',
+      'project': 'Project',
+      'Development': 'Development',
+      'Study': 'Study',
+      'Project': 'Project',
+    };
+
+    if (!category) {
+      return NextResponse.json(
+        { error: '카테고리를 선택해주세요.' },
+        { status: 400 }
+      );
+    }
+
+    const normalizedCategory = categoryMap[category.toLowerCase()];
+    if (!normalizedCategory || !validCategories.includes(normalizedCategory)) {
+      return NextResponse.json(
+        { error: `유효하지 않은 카테고리입니다. 허용된 값: ${validCategories.join(', ')}` },
+        { status: 400 }
+      );
+    }
+
+    // Content 검증
+    if (!content || typeof content !== 'string' || content.trim().length === 0) {
+      return NextResponse.json(
+        { error: '본문 내용을 입력해주세요.' },
         { status: 400 }
       );
     }
@@ -50,11 +84,13 @@ export async function POST(request: NextRequest) {
       .insert({
         author_id: user.id,
         title,
-        category,
+        category: normalizedCategory, // 정규화된 카테고리 사용
         content,
         summary,
         tags,
-        contact,
+        phone: phone || null,
+        email: email || null,
+        contact_url: contact_url || null,
       })
       .select()
       .single();

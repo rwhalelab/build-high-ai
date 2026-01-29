@@ -92,7 +92,7 @@ export async function PUT(
 
     const { id } = await params;
     const body = await request.json();
-    const { title, category, content, contact } = body;
+    const { title, category, content, phone, email, contact_url } = body;
 
     // 게시글 조회 (권한 체크)
     const { data: existingPost, error: fetchError } = await supabase
@@ -124,20 +124,46 @@ export async function PUT(
       );
     }
 
+    // Category 검증 및 변환 (category가 제공된 경우)
+    let normalizedCategory: 'Development' | 'Study' | 'Project' | undefined = undefined;
+    if (category !== undefined) {
+      const validCategories = ['Development', 'Study', 'Project'] as const;
+      const categoryMap: Record<string, typeof validCategories[number]> = {
+        'development': 'Development',
+        'study': 'Study',
+        'project': 'Project',
+        'Development': 'Development',
+        'Study': 'Study',
+        'Project': 'Project',
+      };
+
+      normalizedCategory = categoryMap[category.toLowerCase()];
+      if (!normalizedCategory || !validCategories.includes(normalizedCategory)) {
+        return NextResponse.json(
+          { error: `유효하지 않은 카테고리입니다. 허용된 값: ${validCategories.join(', ')}` },
+          { status: 400 }
+        );
+      }
+    }
+
     // 업데이트 데이터 준비
     const updateData: {
       title?: string;
       category?: 'Development' | 'Study' | 'Project';
       content?: string;
-      contact?: string | null;
+      phone?: string | null;
+      email?: string | null;
+      contact_url?: string | null;
       summary?: string[];
       tags?: string[];
     } = {};
 
     if (title !== undefined) updateData.title = title;
-    if (category !== undefined) updateData.category = category;
+    if (normalizedCategory !== undefined) updateData.category = normalizedCategory;
     if (content !== undefined) updateData.content = content;
-    if (contact !== undefined) updateData.contact = contact || null;
+    if (phone !== undefined) updateData.phone = phone || null;
+    if (email !== undefined) updateData.email = email || null;
+    if (contact_url !== undefined) updateData.contact_url = contact_url || null;
 
     // content가 변경된 경우 AI 재처리
     if (content !== undefined && content !== existingPost.content) {

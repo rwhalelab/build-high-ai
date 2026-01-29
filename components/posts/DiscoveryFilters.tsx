@@ -18,6 +18,7 @@ export type CategoryId = (typeof CATEGORIES)[number]["id"] | string;
 export interface DiscoveryFiltersProps {
   searchQuery: string;
   onSearchChange: (value: string) => void;
+  onSearchSubmit?: () => void; // 검색 제출 핸들러 (선택적)
   activeCategory: string;
   onCategoryChange: (id: string) => void;
 }
@@ -25,9 +26,21 @@ export interface DiscoveryFiltersProps {
 export function DiscoveryFilters({
   searchQuery,
   onSearchChange,
+  onSearchSubmit,
   activeCategory,
   onCategoryChange,
 }: DiscoveryFiltersProps) {
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      onSearchSubmit?.();
+    }
+  };
+
+  const handleSearchClick = () => {
+    onSearchSubmit?.();
+  };
+
   return (
     <section className="mb-8">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -58,9 +71,20 @@ export function DiscoveryFilters({
               placeholder="프로젝트 또는 기술 스택 검색..."
               value={searchQuery}
               onChange={(e) => onSearchChange(e.target.value)}
+              onKeyDown={handleKeyDown}
               className="pl-10"
             />
           </div>
+          <Button 
+            variant="default" 
+            size="icon" 
+            type="button" 
+            onClick={handleSearchClick}
+            aria-label="검색"
+            className="shrink-0"
+          >
+            <Search className="h-4 w-4" />
+          </Button>
           <Button variant="outline" size="icon" type="button" aria-label="필터">
             <SlidersHorizontal className="h-4 w-4" />
           </Button>

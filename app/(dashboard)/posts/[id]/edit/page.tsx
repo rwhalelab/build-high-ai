@@ -1,16 +1,15 @@
 "use client";
 
 /**
- * 게시글 작성 페이지 (Creation)
+ * 게시글 수정 페이지
  * 
- * - 제목, 카테고리, 본문 입력 폼
- * - 우측 AI 가이드 영역 (작성 중 반응)
- * - 저장 버튼 클릭 시 AI 분석 결과 확인 팝업/사이드바
- * - AI 처리 후 DB 저장
+ * - 기존 게시글 데이터를 불러와 폼에 표시
+ * - 제목, 카테고리, 본문, 연락처 수정 가능
+ * - 저장 시 AI 재처리 및 DB 업데이트
  */
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,10 +29,13 @@ import {
   Rocket,
   Link as LinkIcon,
   Save,
+  ArrowLeft,
   Phone,
   Mail,
   Globe,
 } from "lucide-react";
+import Link from "next/link";
+import { PostWithAuthor } from "@/types/post";
 
 const categories = [
   { value: "development", label: "Development", icon: Code },
@@ -48,9 +50,12 @@ const aiTips = [
   "팀 문화나 작업 스타일에 대한 정보를 포함하세요",
 ];
 
-export default function NewPostPage() {
+export default function EditPostPage() {
   const router = useRouter();
+  const params = useParams();
+  const postId = params.id as string;
   const { success, error: showError } = useToast();
+  
   const [category, setCategory] = useState("");
   const [title, setTitle] = useState("");
   const [content, setContent] = useState("");
@@ -58,8 +63,57 @@ export default function NewPostPage() {
   const [email, setEmail] = useState("");
   const [contactUrl, setContactUrl] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [aiStatus, setAiStatus] = useState<"idle" | "ready" | "analyzing">("idle");
   const [titleError, setTitleError] = useState("");
+
+  // 게시글 데이터 불러오기
+  useEffect(() => {
+    const fetchPost = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch(`/api/posts/${postId}`);
+        
+        if (!response.ok) {
+          const error = await response.json();
+          throw new Error(error.error || "게시글을 불러올 수 없습니다.");
+        }
+
+        const { data } = await response.json();
+        const post = data as PostWithAuthor;
+
+        // 카테고리 변환 (Development -> development)
+        const categoryMap: Record<string, string> = {
+          'Development': 'development',
+          'Study': 'study',
+          'Project': 'project',
+        };
+
+        setTitle(post.title || "");
+        setCategory(categoryMap[post.category] || post.category.toLowerCase());
+        setContent(post.content || "");
+        setPhone(post.phone || "");
+        setEmail(post.email || "");
+        setContactUrl(post.contact_url || "");
+        
+        // AI 상태 설정
+        if (post.content && post.content.length > 50) {
+          setAiStatus("ready");
+        }
+      } catch (error) {
+        console.error("Error fetching post:", error);
+        const errorMessage = error instanceof Error ? error.message : "게시글을 불러오는 중 오류가 발생했습니다";
+        showError("게시글 불러오기 실패", errorMessage);
+        router.push(`/posts/${postId}`);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    if (postId) {
+      fetchPost();
+    }
+  }, [postId, router, showError]);
 
   // Update AI status based on content length
   useEffect(() => {
@@ -95,8 +149,8 @@ export default function NewPostPage() {
     setAiStatus("analyzing");
 
     try {
-      const response = await fetch("/api/posts", {
-        method: "POST",
+      const response = await fetch(`/api/posts/${postId}`, {
+        method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title,
@@ -110,20 +164,20 @@ export default function NewPostPage() {
 
       if (!response.ok) {
         const error = await response.json();
-        throw new Error(error.error || "게시글 생성 실패");
+        throw new Error(error.error || "게시글 수정 실패");
       }
 
       // 성공 토스트 표시
-      success("게시글 작성 완료", "게시글이 성공적으로 작성되었습니다.");
+      success("게시글 수정 완료", "게시글이 성공적으로 수정되었습니다.");
       
-      // 성공 시 대시보드로 리다이렉트
+      // 성공 시 게시글 상세 페이지로 리다이렉트
       setTimeout(() => {
-        router.push("/");
+        router.push(`/posts/${postId}`);
       }, 500);
     } catch (error) {
-      console.error("Error creating post:", error);
-      const errorMessage = error instanceof Error ? error.message : "게시글 생성 중 오류가 발생했습니다";
-      showError("게시글 작성 실패", errorMessage);
+      console.error("Error updating post:", error);
+      const errorMessage = error instanceof Error ? error.message : "게시글 수정 중 오류가 발생했습니다";
+      showError("게시글 수정 실패", errorMessage);
     } finally {
       setIsSubmitting(false);
       setAiStatus("ready");
@@ -132,12 +186,29 @@ export default function NewPostPage() {
 
   const isFormValid = category && title.length >= 5 && content.length > 50 && (phone.trim() || email.trim() || contactUrl.trim());
 
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="flex justify-center items-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground">새 게시글 작성</h1>
+        <Link
+          href={`/posts/${postId}`}
+          className="mb-4 inline-flex items-center gap-2 text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          게시글 상세로 돌아가기
+        </Link>
+        <h1 className="text-3xl font-bold text-foreground">게시글 수정</h1>
         <p className="mt-2 text-muted-foreground">
-          프로젝트 상세 정보를 작성하고 AI가 완벽한 팀원을 찾도록 도와드립니다.
+          게시글 정보를 수정하고 AI가 다시 분석합니다.
         </p>
       </div>
 
@@ -305,7 +376,7 @@ export default function NewPostPage() {
                   ) : (
                     <>
                       <Save className="h-4 w-4" />
-                      저장 및 게시
+                      수정 완료
                     </>
                   )}
                 </Button>
@@ -355,19 +426,19 @@ export default function NewPostPage() {
 
               <div className="p-5">
                 <p className="mb-4 text-sm text-muted-foreground">
-                  게시글을 저장하면 AI가 자동으로:
+                  게시글을 수정하면 AI가 자동으로:
                 </p>
                 <ul className="space-y-3">
                   <li className="flex items-start gap-2">
                     <FileText className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     <span className="text-sm text-foreground">
-                      3줄 요약을 생성하여 빠른 개요 제공
+                      3줄 요약을 재생성하여 빠른 개요 제공
                     </span>
                   </li>
                   <li className="flex items-start gap-2">
                     <Code className="mt-0.5 h-4 w-4 shrink-0 text-primary" />
                     <span className="text-sm text-foreground">
-                      핵심 기술 스택 태그 5개 추출
+                      핵심 기술 스택 태그 5개 재추출
                     </span>
                   </li>
                 </ul>

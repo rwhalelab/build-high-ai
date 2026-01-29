@@ -12,8 +12,7 @@ import * as React from 'react';
 import { PostWithAuthor } from '@/types/post';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Calendar, User, ExternalLink, Users } from 'lucide-react';
-import Link from 'next/link';
+import { Calendar, User, ExternalLink, Users, Phone, Mail, Globe } from 'lucide-react';
 import { PostActions } from './post-actions';
 import { PostApplications } from './post-applications';
 
@@ -162,22 +161,70 @@ export function PostDetail({ post }: PostDetailProps) {
           </CardContent>
         </Card>
 
-        {/* 연락처 버튼 */}
-        {post.contact && (
+        {/* 연락처 정보 */}
+        {(post.phone || post.email || post.contact_url) && (
           <Card>
             <CardHeader>
               <CardTitle className="text-base">연락하기</CardTitle>
             </CardHeader>
-            <CardContent>
-              <Link
-                href={post.contact}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90"
-              >
-                <ExternalLink className="h-4 w-4" />
-                연락처 열기
-              </Link>
+            <CardContent className="space-y-3">
+              {/* 전화번호 */}
+              {post.phone && (
+                <a
+                  href={`tel:${post.phone}`}
+                  className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+                >
+                  <Phone className="h-4 w-4 text-primary" />
+                  <span>{post.phone}</span>
+                </a>
+              )}
+
+              {/* 이메일 */}
+              {post.email && (
+                <a
+                  href={`mailto:${post.email}`}
+                  className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+                >
+                  <Mail className="h-4 w-4 text-primary" />
+                  <span>{post.email}</span>
+                </a>
+              )}
+
+              {/* 연락처 URL */}
+              {post.contact_url && (() => {
+                // URL 형식 검증 및 보정
+                const normalizeContactUrl = (url: string): string => {
+                  const trimmed = url.trim();
+                  
+                  // 이미 완전한 URL인 경우 그대로 반환
+                  if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+                    return trimmed;
+                  }
+                  
+                  // 상대 경로나 도메인만 있는 경우 https:// 추가
+                  if (trimmed.includes('.') || trimmed.includes('/')) {
+                    return `https://${trimmed}`;
+                  }
+                  
+                  // 기본값: https:// 추가
+                  return `https://${trimmed}`;
+                };
+
+                const contactUrl = normalizeContactUrl(post.contact_url);
+
+                return (
+                  <a
+                    href={contactUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 rounded-lg border border-border bg-background px-4 py-2 text-sm font-medium text-foreground transition-colors hover:bg-accent"
+                  >
+                    <Globe className="h-4 w-4 text-primary" />
+                    <span className="flex-1 truncate">{post.contact_url}</span>
+                    <ExternalLink className="h-3 w-3 text-muted-foreground" />
+                  </a>
+                );
+              })()}
             </CardContent>
           </Card>
         )}

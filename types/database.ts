@@ -54,7 +54,10 @@ export interface Database {
           content: string;
           summary: string[] | null;
           tags: string[] | null; // TEXT[]로 변경 (JSONB에서 변경)
-          contact: string | null;
+          contact: string | null; // 기존 필드 (하위 호환성 유지)
+          phone: string | null;
+          email: string | null;
+          contact_url: string | null;
           created_at: string;
           updated_at: string;
         };
@@ -66,7 +69,10 @@ export interface Database {
           content: string;
           summary?: string[] | null;
           tags?: string[] | null; // TEXT[]로 변경
-          contact?: string | null;
+          contact?: string | null; // 기존 필드 (하위 호환성 유지)
+          phone?: string | null;
+          email?: string | null;
+          contact_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -78,7 +84,10 @@ export interface Database {
           content?: string;
           summary?: string[] | null;
           tags?: string[] | null; // TEXT[]로 변경
-          contact?: string | null;
+          contact?: string | null; // 기존 필드 (하위 호환성 유지)
+          phone?: string | null;
+          email?: string | null;
+          contact_url?: string | null;
           created_at?: string;
           updated_at?: string;
         };

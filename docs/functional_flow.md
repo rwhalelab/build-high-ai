@@ -120,7 +120,7 @@
 
 - **2.3.1** 게시글 생성 폼 컴포넌트 구현
   - 기술: `components/domain/posts/post-editor.tsx` (Client Component)
-  - 상태: `useState`로 폼 데이터 관리 (title, category, content, contact)
+  - 상태: `useState`로 폼 데이터 관리 (title, category, content, phone, email, contact_url)
   - 유효성 검사: 제목 5자 이상, 카테고리 필수
   - 제출: `/api/posts` POST 요청
 
@@ -135,7 +135,7 @@
   - 기술: `app/api/posts/route.ts` (기존 파일 개선)
   - Supabase SDK: `createClient()` (Server)
   - AI 호출: `generateSummaryAndTags(content)` 실행
-  - DB 저장: `posts` 테이블 INSERT (author_id, title, category, content, summary, tags, contact)
+  - DB 저장: `posts` 테이블 INSERT (author_id, title, category, content, summary, tags, phone, email, contact_url)
   - 활동 로그: `user_activities` 테이블 INSERT (activity_type: 'post_create')
 
 ---

@@ -6,68 +6,82 @@ import { DiscoveryFilters } from "./DiscoveryFilters";
 import { DiscoveryPostCard, type DiscoveryPostItem } from "./DiscoveryPostCard";
 import { CtaBanner } from "./CtaBanner";
 import { EmptyState } from "@/components/domain/shared/empty-state";
-import { Button } from "@/components/ui/button";
+import { usePosts } from "@/hooks/use-posts";
+import { PostWithAuthor } from "@/types/post";
+import { LoadingSpinner } from "@/components/domain/shared/loading-spinner";
 
-/** Discovery용 목업 데이터 (실제로는 API/DB 연동) */
-const MOCK_POSTS: DiscoveryPostItem[] = [
-  {
-    id: "1",
-    title: "AI 기반 이커머스 플랫폼 개발",
-    category: "Development",
-    summaryLines: [
-      "Next.js 기반 쇼핑 플랫폼 구축",
-      "AI 상품 추천 시스템 적용",
-      "프론트/백엔드 개발자 모집",
-    ],
-    techTags: ["Next.js", "TypeScript", "Prisma", "OpenAI", "Tailwind"],
-    authorName: "Alex Kim",
-    createdAt: "2일 전",
-  },
-  {
-    id: "2",
-    title: "딥러닝 스터디 - Transformer 아키텍처",
-    category: "Study",
-    summaryLines: [
-      "Transformer 중심 주간 스터디",
-      "논문 구현 from scratch",
-      "ML 입문~중급 환영",
-    ],
-    techTags: ["Python", "PyTorch", "Transformers", "NLP"],
-    authorName: "Sarah Lee",
-    createdAt: "5시간 전",
-  },
-  {
-    id: "3",
-    title: "피트니스 트래킹 앱 (소셜 기능)",
-    category: "Project",
-    summaryLines: [
-      "모바일 퍼스트 피트니스 트래커",
-      "챌린지·그룹 운동 기능",
-      "React Native 개발자 모집",
-    ],
-    techTags: ["React Native", "Firebase", "Node.js", "MongoDB"],
-    authorName: "Mike Chen",
-    createdAt: "1일 전",
-  },
-];
+// PostWithAuthor를 DiscoveryPostItem으로 변환하는 헬퍼 함수
+function convertToDiscoveryPostItem(post: PostWithAuthor): DiscoveryPostItem {
+  const summary = Array.isArray(post.summary) ? post.summary : [];
+  const tags = Array.isArray(post.tags) ? post.tags : [];
+  
+  // 날짜를 상대 시간으로 변환 (예: "2일 전", "5시간 전")
+  const formatRelativeTime = (date: string | Date) => {
+    const now = new Date();
+    const postDate = new Date(date);
+    const diffMs = now.getTime() - postDate.getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
+
+    if (diffMins < 1) return "방금 전";
+    if (diffMins < 60) return `${diffMins}분 전`;
+    if (diffHours < 24) return `${diffHours}시간 전`;
+    if (diffDays < 7) return `${diffDays}일 전`;
+    return postDate.toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' });
+  };
+
+  return {
+    id: post.id,
+    title: post.title,
+    category: post.category,
+    summaryLines: summary.slice(0, 3),
+    techTags: tags,
+    authorName: post.author?.username || "알 수 없음",
+    createdAt: formatRelativeTime(post.created_at),
+  };
+}
 
 export function DiscoveryPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState<string>("all");
-  const [showEmpty, setShowEmpty] = useState(false);
 
+  // Supabase에서 게시글 데이터 가져오기
+  const categoryFilter = activeCategory === "all" 
+    ? undefined 
+    : (activeCategory as "Development" | "Study" | "Project");
+  
+  const { posts, loading, error } = usePosts({
+    category: categoryFilter,
+    pageSize: 50, // 충분히 많은 게시글 가져오기
+  });
+
+  // DiscoveryPostItem으로 변환
+  const discoveryPosts = useMemo(() => {
+    return posts.map(convertToDiscoveryPostItem);
+  }, [posts]);
+
+  // 클라이언트 사이드 필터링 (검색어)
   const filteredPosts = useMemo(() => {
-    if (showEmpty) return [];
-    return MOCK_POSTS.filter((post) => {
-      const matchCategory =
-        activeCategory === "all" || post.category === activeCategory;
-      const q = searchQuery.toLowerCase();
+    if (!searchQuery.trim()) return discoveryPosts;
+    
+    const q = searchQuery.toLowerCase().trim();
+    return discoveryPosts.filter((post) => {
       const matchSearch =
         post.title.toLowerCase().includes(q) ||
         post.techTags.some((t) => String(t).toLowerCase().includes(q));
-      return matchCategory && matchSearch;
+      return matchSearch;
     });
-  }, [searchQuery, activeCategory, showEmpty]);
+  }, [discoveryPosts, searchQuery]);
+
+  // 검색 실행 핸들러 (검색 버튼 클릭 또는 엔터 키)
+  const handleSearchSubmit = () => {
+    // 검색은 이미 실시간으로 동작하므로, 여기서는 추가 피드백 제공
+    // 예: 검색 결과가 없을 때 스크롤 이동 등
+    if (filteredPosts.length === 0 && searchQuery.trim()) {
+      // 검색 결과가 없을 때는 이미 EmptyState가 표시됨
+    }
+  };
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -75,29 +89,31 @@ export function DiscoveryPage() {
       <DiscoveryFilters
         searchQuery={searchQuery}
         onSearchChange={setSearchQuery}
+        onSearchSubmit={handleSearchSubmit}
         activeCategory={activeCategory}
         onCategoryChange={setActiveCategory}
       />
 
-      {/* 데모용: 빈 상태 토글 (개발 시 확인용, 추후 제거 가능) */}
-      <div className="mb-6 flex items-center gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => setShowEmpty((v) => !v)}
-          className="text-xs text-muted-foreground"
-        >
-          {showEmpty ? "목록 보기" : "빈 상태 보기"}
-        </Button>
-      </div>
-
-      {filteredPosts.length === 0 ? (
+      {loading ? (
+        <div className="flex justify-center items-center py-12">
+          <LoadingSpinner size="large" />
+        </div>
+      ) : error ? (
+        <div className="text-center text-destructive py-8">
+          <p>게시글을 불러오는 중 오류가 발생했습니다.</p>
+          <p className="text-sm text-muted-foreground mt-2">{error.message}</p>
+        </div>
+      ) : filteredPosts.length === 0 ? (
         <EmptyState
-          title="첫 번째 프로젝트의 주인공이 되어보세요!"
-          description="첫 번째 모집글을 작성하고 팀 빌딩을 시작해보세요."
-          actionLabel="팀원 모집하기"
-          actionHref="/posts/new"
+          title={searchQuery.trim() ? "검색 결과가 없습니다" : "첫 번째 프로젝트의 주인공이 되어보세요!"}
+          description={
+            searchQuery.trim() 
+              ? `"${searchQuery}"에 대한 검색 결과를 찾을 수 없습니다. 다른 키워드로 검색해보세요.`
+              : "첫 번째 모집글을 작성하고 팀 빌딩을 시작해보세요."
+          }
+          actionLabel={searchQuery.trim() ? "전체 게시글 보기" : "팀원 모집하기"}
+          actionHref={searchQuery.trim() ? undefined : "/posts/new"}
+          onAction={searchQuery.trim() ? () => setSearchQuery("") : undefined}
         />
       ) : (
         <section>

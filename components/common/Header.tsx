@@ -35,9 +35,23 @@ export function Header() {
   const handleLogout = async () => {
     const supabase = createClient();
     if (supabase) {
-      await supabase.auth.signOut();
-      router.push("/login");
-      router.refresh();
+      try {
+        // Supabase 세션 삭제
+        const { error } = await supabase.auth.signOut();
+        if (error) {
+          console.error('로그아웃 오류:', error);
+        }
+        // 로그인 페이지로 리다이렉트
+        router.push("/login");
+        // 페이지 새로고침으로 세션 상태 완전히 초기화
+        router.refresh();
+        // 추가로 window.location을 사용하여 완전한 페이지 리로드 (선택적)
+        // window.location.href = '/login';
+      } catch (err) {
+        console.error('로그아웃 처리 중 오류:', err);
+        // 에러가 나도 로그인 페이지로 이동
+        router.push("/login");
+      }
     }
   };
 
@@ -105,12 +119,17 @@ export function Header() {
             // 로그인된 경우: 프로필 사진과 드롭다운 메뉴
             <DropdownMenu>
               <DropdownMenuTrigger>
-                <Avatar className="h-8 w-8 cursor-pointer border-2 border-border hover:border-primary transition-colors">
-                  <AvatarImage src={getAvatarUrl() || undefined} alt={getUserDisplayName() || "User"} />
-                  <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
-                    {getAvatarFallback()}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+                  <span className="hidden sm:block text-sm font-medium text-foreground">
+                    {getUserDisplayName()}
+                  </span>
+                  <Avatar className="h-8 w-8 border-2 border-border hover:border-primary transition-colors">
+                    <AvatarImage src={getAvatarUrl() || undefined} alt={getUserDisplayName() || "User"} />
+                    <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                      {getAvatarFallback()}
+                    </AvatarFallback>
+                  </Avatar>
+                </div>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <div className="px-2 py-1.5 border-b">

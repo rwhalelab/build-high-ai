@@ -25,7 +25,12 @@ export async function generateSummaryAndTags(
   try {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) {
-      throw new Error('GEMINI_API_KEY가 설정되지 않았습니다.');
+      console.warn('GEMINI_API_KEY가 설정되지 않았습니다. 기본값을 사용합니다.');
+      // API 키가 없을 때 기본값 반환
+      return {
+        summary: ['요약을 생성할 수 없습니다.', '', ''],
+        tags: [],
+      };
     }
 
     // 임시 구현 (실제 API 연동 필요)
