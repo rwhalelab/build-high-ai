@@ -11,9 +11,11 @@
 3. `20250129000002_create_post_views.sql` - 조회수 추적 테이블 생성
 4. `20250129000003_create_post_applications.sql` - 지원/매칭 내역 테이블 생성
 5. `20250129000004_create_user_activities.sql` - 사용자 활동 로그 테이블 생성
-6. `20250129000007_create_common_codes.sql` - 공통 코드 마스터/상세 테이블 생성 ⭐ NEW
-7. `20250129000005_create_triggers.sql` - 트리거 함수 생성
-8. `20250129000006_setup_rls_policies.sql` - RLS 정책 설정 (공통 코드 테이블 포함)
+6. `20250129000007_create_common_codes.sql` - 공통 코드 마스터/상세 테이블 생성
+7. `20250129000008_update_contact_fields.sql` - 게시글 연락처 필드 업데이트
+8. `20250129000009_create_ai_responses.sql` - AI 응답 저장 테이블 생성 ⭐ NEW
+9. `20250129000005_create_triggers.sql` - 트리거 함수 생성
+10. `20250129000006_setup_rls_policies.sql` - RLS 정책 설정 (공통 코드 테이블 포함)
 
 ## Supabase에서 마이그레이션 실행 방법
 
@@ -53,8 +55,9 @@ supabase db push
 - `post_views` - 게시글 조회수 추적
 - `post_applications` - 프로젝트 지원/매칭 내역
 - `user_activities` - 사용자 활동 로그
-- `common_code_master` - 공통 코드 마스터 (시스템 전역 코드 그룹) ⭐ NEW
-- `common_code_detail` - 공통 코드 상세 (마스터 코드에 속하는 개별 코드 값) ⭐ NEW
+- `common_code_master` - 공통 코드 마스터 (시스템 전역 코드 그룹)
+- `common_code_detail` - 공통 코드 상세 (마스터 코드에 속하는 개별 코드 값)
+- `ai_responses` - AI 응답 저장 테이블 (비용 절감을 위한 캐싱) ⭐ NEW
 
 ### 주요 기능
 - **RLS (Row Level Security)**: 모든 테이블에 보안 정책 적용

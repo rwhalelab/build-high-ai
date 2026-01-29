@@ -11,7 +11,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { Zap, PenSquare, Search, User, LogOut } from "lucide-react";
+import { Zap, PenSquare, Search, User, LogOut, Bot } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { createClient } from "@/lib/supabase/client";
 
@@ -19,13 +19,27 @@ import { createClient } from "@/lib/supabase/client";
  * PRD §4 반영 메뉴 구성
  * - 팀 찾기 (Discovery): 메인 탐색
  * - 모집글 작성 (Creation): 지능형 작성 에디터
- * - 마이페이지: Phase 1 기초 프로필
+ * - AI 챗봇: AI와의 대화 (우측에 특별 스타일로 배치)
+ * - 마이페이지: Phase 1 기초 프로필 (닉네임 좌측에 배치)
  */
 const NAV_ITEMS = [
   { href: "/", label: "팀 찾기", icon: Search, description: "메인 탐색 (Discovery)" },
   { href: "/posts/new", label: "모집글 작성", icon: PenSquare, description: "지능형 작성 에디터 (Creation)" },
-  { href: "/profile", label: "마이페이지", icon: User, description: "기초 프로필" },
 ] as const;
+
+const AI_CHAT_ITEM = {
+  href: "/ai/chat",
+  label: "AI 챗봇",
+  icon: Bot,
+  description: "AI와의 대화",
+} as const;
+
+const PROFILE_ITEM = {
+  href: "/profile",
+  label: "마이페이지",
+  icon: User,
+  description: "기초 프로필",
+} as const;
 
 export function Header() {
   const pathname = usePathname();
@@ -75,11 +89,21 @@ export function Header() {
     return name.charAt(0).toUpperCase();
   };
 
+  const isAIChatActive =
+    pathname === AI_CHAT_ITEM.href || pathname.startsWith(AI_CHAT_ITEM.href);
+  const AIChatIcon = AI_CHAT_ITEM.icon;
+
+  const isProfileActive =
+    pathname === PROFILE_ITEM.href || pathname.startsWith(PROFILE_ITEM.href);
+  const ProfileIcon = PROFILE_ITEM.icon;
+
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
+        {/* 좌측: 로고 + 메인 메뉴 */}
         <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2">
+          <Link href="/" className="flex items-center gap-2 shrink-0">
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
               <Zap className="h-5 w-5 text-primary-foreground" />
             </div>
@@ -87,7 +111,7 @@ export function Header() {
               Build-High
             </span>
           </Link>
-          <nav className="hidden items-center gap-1 md:flex">
+          <nav className="hidden items-center gap-1 lg:flex">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive =
@@ -109,28 +133,69 @@ export function Header() {
                 </Link>
               );
             })}
+            {/* AI 챗봇 메뉴 - 모집글 작성 오른쪽에 특별 스타일로 배치 */}
+            <Link
+              href={AI_CHAT_ITEM.href}
+              className={cn(
+                "flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold transition-all duration-200",
+                "bg-gradient-to-r from-primary/20 via-primary/15 to-primary/20",
+                "border border-primary/40 shadow-sm",
+                "hover:from-primary/30 hover:via-primary/25 hover:to-primary/30",
+                "hover:shadow-md hover:scale-[1.02] hover:border-primary/60",
+                isAIChatActive && "ring-2 ring-primary/50 shadow-lg from-primary/30 to-primary/30"
+              )}
+            >
+              <div className="relative">
+                <AIChatIcon className="h-5 w-5 text-primary" />
+                <span className="absolute -top-0.5 -right-0.5 h-2 w-2 bg-primary rounded-full animate-pulse" />
+              </div>
+              <span className={cn(
+                "font-semibold",
+                isAIChatActive 
+                  ? "text-primary" 
+                  : "bg-gradient-to-r from-primary to-primary/80 bg-clip-text text-transparent"
+              )}>
+                {AI_CHAT_ITEM.label}
+              </span>
+            </Link>
           </nav>
         </div>
+        
+        {/* 우측: 마이페이지 + 사용자 프로필 */}
         <div className="flex items-center gap-3">
           {loading ? (
             // 로딩 중일 때는 아무것도 표시하지 않음
             <div className="h-8 w-8" />
           ) : user ? (
-            // 로그인된 경우: 프로필 사진과 드롭다운 메뉴
-            <DropdownMenu>
-              <DropdownMenuTrigger>
-                <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
-                  <span className="hidden sm:block text-sm font-medium text-foreground">
-                    {getUserDisplayName()}
-                  </span>
-                  <Avatar className="h-8 w-8 border-2 border-border hover:border-primary transition-colors">
-                    <AvatarImage src={getAvatarUrl() || undefined} alt={getUserDisplayName() || "User"} />
-                    <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
-                      {getAvatarFallback()}
-                    </AvatarFallback>
-                  </Avatar>
-                </div>
-              </DropdownMenuTrigger>
+            <>
+              {/* 마이페이지 메뉴 - 닉네임 좌측에 배치 */}
+              <Link
+                href={PROFILE_ITEM.href}
+                className={cn(
+                  "hidden sm:flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-colors",
+                  isProfileActive
+                    ? "bg-primary/10 text-primary"
+                    : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                )}
+              >
+                <ProfileIcon className="h-4 w-4" />
+                {PROFILE_ITEM.label}
+              </Link>
+              {/* 로그인된 경우: 프로필 사진과 드롭다운 메뉴 */}
+              <DropdownMenu>
+                <DropdownMenuTrigger>
+                  <div className="flex items-center gap-2 cursor-pointer hover:opacity-80 transition-opacity">
+                    <span className="hidden sm:block text-sm font-medium text-foreground">
+                      {getUserDisplayName()}
+                    </span>
+                    <Avatar className="h-8 w-8 border-2 border-border hover:border-primary transition-colors">
+                      <AvatarImage src={getAvatarUrl() || undefined} alt={getUserDisplayName() || "User"} />
+                      <AvatarFallback className="bg-primary text-primary-foreground text-sm font-medium">
+                        {getAvatarFallback()}
+                      </AvatarFallback>
+                    </Avatar>
+                  </div>
+                </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <div className="px-2 py-1.5 border-b">
                   <p className="text-sm font-medium">{getUserDisplayName()}</p>
@@ -150,6 +215,7 @@ export function Header() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
+            </>
           ) : (
             // 로그인하지 않은 경우: 로그인 버튼
             <>
