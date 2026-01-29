@@ -170,6 +170,94 @@ CREATE TABLE user_activities (
 
 ---
 
+### 6. `common_code_master` 테이블 ⭐ NEW
+
+**역할**: 공통 코드 마스터 정보 저장 (시스템 전역에서 사용되는 코드 그룹)
+
+```sql
+CREATE TABLE common_code_master (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  code VARCHAR(50) NOT NULL UNIQUE, -- 마스터 코드 (예: BH_ST_APPLICATION)
+  name VARCHAR(100) NOT NULL, -- 마스터 코드명 (예: 신청 상태)
+  description TEXT, -- 설명
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+```
+
+**주요 컬럼:**
+- `id`: 마스터 코드 고유 식별자 (UUID)
+- `code`: 마스터 코드 (예: `BH_ST_APPLICATION`, `BH_USER_ROLE`)
+- `name`: 마스터 코드명 (예: "신청 상태", "유저 권한")
+- `description`: 마스터 코드 설명
+- `created_at`, `updated_at`: 생성/수정 시간
+
+**인덱스:**
+- `idx_common_code_master_code`: 마스터 코드 기준 조회 최적화
+
+**용도:**
+- 시스템 전역에서 사용되는 코드 그룹 관리
+- 신청 상태, 유저 권한 등 마스터 데이터 관리
+
+**예시 데이터:**
+- `BH_ST_APPLICATION`: 신청 상태
+- `BH_USER_ROLE`: 유저 권한
+
+---
+
+### 7. `common_code_detail` 테이블 ⭐ NEW
+
+**역할**: 공통 코드 상세 정보 저장 (마스터 코드에 속하는 개별 코드 값)
+
+```sql
+CREATE TABLE common_code_detail (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  master_code VARCHAR(50) NOT NULL REFERENCES common_code_master(code) ON DELETE CASCADE,
+  code VARCHAR(50) NOT NULL, -- 상세 코드 (예: PENDING)
+  name VARCHAR(100) NOT NULL, -- 상세 코드명 (예: 대기중)
+  description TEXT, -- 설명
+  sort_order INTEGER DEFAULT 0, -- 정렬 순서
+  is_active BOOLEAN DEFAULT TRUE, -- 사용 여부
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  UNIQUE(master_code, code) -- 마스터 코드와 상세 코드 조합은 유일해야 함
+);
+```
+
+**주요 컬럼:**
+- `id`: 상세 코드 고유 식별자 (UUID)
+- `master_code`: 마스터 코드 참조 (외래 키)
+- `code`: 상세 코드 (예: `PENDING`, `APPROVED`, `REJECTED`)
+- `name`: 상세 코드명 (예: "대기중", "승인됨", "거절됨")
+- `description`: 상세 코드 설명
+- `sort_order`: 정렬 순서 (낮을수록 먼저 표시)
+- `is_active`: 사용 여부 (false인 경우 비활성화)
+- `created_at`, `updated_at`: 생성/수정 시간
+
+**인덱스:**
+- `idx_common_code_detail_master_code`: 마스터 코드 기준 조회 최적화
+- `idx_common_code_detail_code`: 상세 코드 기준 조회 최적화
+- `idx_common_code_detail_is_active`: 활성화 여부 필터링 최적화
+- `idx_common_code_detail_sort_order`: 정렬 순서 기준 조회 최적화
+
+**용도:**
+- 마스터 코드에 속하는 개별 코드 값 관리
+- 드롭다운, 선택 옵션 등 UI 컴포넌트에서 사용
+
+**예시 데이터:**
+- `BH_ST_APPLICATION` 마스터의 상세 코드:
+  - `PENDING`: 대기중 (sort_order: 1)
+  - `APPROVED`: 승인됨 (sort_order: 2)
+  - `REJECTED`: 거절됨 (sort_order: 3)
+  - `WITHDRAWN`: 철회됨 (sort_order: 4)
+- `BH_USER_ROLE` 마스터의 상세 코드:
+  - `ADMIN`: 관리자 (sort_order: 1)
+  - `MEMBER`: 일반 회원 (sort_order: 2)
+  - `GUEST`: 게스트 (sort_order: 3)
+  - `PREMIUM`: 프리미엄 회원 (sort_order: 4)
+
+---
+
 ## 🔐 Row Level Security (RLS) 정책
 
 모든 테이블에 RLS가 활성화되어 있으며, 다음 정책들이 적용됩니다:
@@ -196,6 +284,14 @@ CREATE TABLE user_activities (
 ### `user_activities` 테이블
 - ✅ 인증된 사용자는 활동 기록 생성 가능
 - ✅ 통계용으로 모든 활동 기록 조회 허용
+
+### `common_code_master` 테이블
+- ✅ 모든 인증된 사용자는 공통 코드 마스터 조회 가능 (읽기 전용)
+- ⏳ 생성/수정/삭제는 관리자 권한 필요 (향후 구현)
+
+### `common_code_detail` 테이블
+- ✅ 모든 인증된 사용자는 공통 코드 상세 조회 가능 (읽기 전용)
+- ⏳ 생성/수정/삭제는 관리자 권한 필요 (향후 구현)
 
 ---
 
@@ -263,8 +359,9 @@ ORDER BY view_count DESC;
 3. `20250129000002_create_post_views.sql`
 4. `20250129000003_create_post_applications.sql`
 5. `20250129000004_create_user_activities.sql`
-6. `20250129000005_create_triggers.sql`
-7. `20250129000006_setup_rls_policies.sql`
+6. `20250129000007_create_common_codes.sql`
+7. `20250129000005_create_triggers.sql`
+8. `20250129000006_setup_rls_policies.sql`
 
 자세한 실행 방법은 `supabase/migrations/README.md`를 참조하세요.
 
@@ -278,6 +375,8 @@ ORDER BY view_count DESC;
    - `post_views` - 조회수 추적
    - `post_applications` - 지원/매칭 내역
    - `user_activities` - 사용자 활동 로그
+   - `common_code_master` - 공통 코드 마스터
+   - `common_code_detail` - 공통 코드 상세
 
 ### 설계 원칙
 - ✅ 실제 UI 컴포넌트가 요구하는 데이터 구조 우선

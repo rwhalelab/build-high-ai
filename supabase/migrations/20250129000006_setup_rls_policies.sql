@@ -158,3 +158,49 @@ CREATE POLICY "Users can view own activities"
   FOR SELECT
   TO authenticated
   USING (auth.uid() = user_id OR true); -- 통계용으로 모든 활동 기록 조회 허용
+
+-- ============================================
+-- common_code_master 테이블 RLS 정책
+-- ============================================
+
+ALTER TABLE common_code_master ENABLE ROW LEVEL SECURITY;
+
+-- 정책 1: 모든 인증된 사용자는 공통 코드 마스터 조회 가능 (읽기 전용)
+DROP POLICY IF EXISTS "Authenticated users can view common code masters" ON common_code_master;
+CREATE POLICY "Authenticated users can view common code masters"
+  ON common_code_master
+  FOR SELECT
+  TO authenticated
+  USING (true);
+
+-- 정책 2: 관리자만 공통 코드 마스터 생성/수정/삭제 가능 (향후 구현)
+-- 현재는 관리자 권한 체크가 없으므로 주석 처리
+-- DROP POLICY IF EXISTS "Admins can manage common code masters" ON common_code_master;
+-- CREATE POLICY "Admins can manage common code masters"
+--   ON common_code_master
+--   FOR ALL
+--   TO authenticated
+--   USING (/* 관리자 권한 체크 로직 */);
+
+-- ============================================
+-- common_code_detail 테이블 RLS 정책
+-- ============================================
+
+ALTER TABLE common_code_detail ENABLE ROW LEVEL SECURITY;
+
+-- 정책 1: 모든 인증된 사용자는 공통 코드 상세 조회 가능 (읽기 전용)
+DROP POLICY IF EXISTS "Authenticated users can view common code details" ON common_code_detail;
+CREATE POLICY "Authenticated users can view common code details"
+  ON common_code_detail
+  FOR SELECT
+  TO authenticated
+  USING (true);
+
+-- 정책 2: 관리자만 공통 코드 상세 생성/수정/삭제 가능 (향후 구현)
+-- 현재는 관리자 권한 체크가 없으므로 주석 처리
+-- DROP POLICY IF EXISTS "Admins can manage common code details" ON common_code_detail;
+-- CREATE POLICY "Admins can manage common code details"
+--   ON common_code_detail
+--   FOR ALL
+--   TO authenticated
+--   USING (/* 관리자 권한 체크 로직 */);
