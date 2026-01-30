@@ -11,9 +11,10 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
-import { Zap, PenSquare, Search, User, LogOut, Bot } from "lucide-react";
+import { Zap, PenSquare, Search, User, LogOut, Bot, Menu, X } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { createClient } from "@/lib/supabase/client";
+import { useState, useEffect } from "react";
 
 /**
  * PRD §4 반영 메뉴 구성
@@ -45,6 +46,24 @@ export function Header() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, loading } = useAuth();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+  // 모바일 메뉴가 열릴 때 body 스크롤 잠금
+  useEffect(() => {
+    if (mobileMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [mobileMenuOpen]);
+
+  // 경로 변경 시 모바일 메뉴 닫기
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [pathname]);
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -98,12 +117,19 @@ export function Header() {
   const ProfileIcon = PROFILE_ITEM.icon;
 
 
+  // 모든 메뉴 항목 통합 (모바일 메뉴용)
+  const allNavItems = [
+    ...NAV_ITEMS,
+    AI_CHAT_ITEM,
+    ...(user ? [PROFILE_ITEM] : []),
+  ];
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
         {/* 좌측: 로고 + 메인 메뉴 */}
-        <div className="flex items-center gap-8">
-          <Link href="/" className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center gap-4 lg:gap-8">
+          <Link href="/" className="flex items-center gap-2 shrink-0" onClick={() => setMobileMenuOpen(false)}>
             <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-primary">
               <Zap className="h-5 w-5 text-primary-foreground" />
             </div>
@@ -111,6 +137,18 @@ export function Header() {
               Build-High
             </span>
           </Link>
+          {/* 모바일 메뉴 버튼 */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="lg:hidden flex items-center justify-center w-10 h-10 rounded-lg text-foreground hover:bg-secondary transition-colors"
+            aria-label="메뉴 열기"
+          >
+            {mobileMenuOpen ? (
+              <X className="h-5 w-5" />
+            ) : (
+              <Menu className="h-5 w-5" />
+            )}
+          </button>
           <nav className="hidden items-center gap-1 lg:flex">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
@@ -261,6 +299,61 @@ export function Header() {
           )}
         </div>
       </div>
+      
+      {/* 모바일 메뉴 오버레이 */}
+      {mobileMenuOpen && (
+        <>
+          {/* 배경 오버레이 */}
+          <div
+            className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 lg:hidden"
+            onClick={() => setMobileMenuOpen(false)}
+          />
+          {/* 모바일 메뉴 */}
+          <div className="lg:hidden fixed top-16 left-0 right-0 bottom-0 z-50 border-t border-border bg-background overflow-y-auto">
+            <nav className="mx-auto max-w-7xl px-4 py-4 space-y-1">
+            {allNavItems.map((item) => {
+              const Icon = item.icon;
+              const isActive =
+                pathname === item.href ||
+                (item.href !== "/" && pathname.startsWith(item.href));
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={cn(
+                    "flex items-center gap-3 rounded-lg px-4 py-3 text-base font-medium transition-colors",
+                    isActive
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                  )}
+                >
+                  <Icon className="h-5 w-5" />
+                  {item.label}
+                  {item.href === AI_CHAT_ITEM.href && (
+                    <span className="ml-auto h-2 w-2 bg-primary rounded-full animate-pulse" />
+                  )}
+                </Link>
+              );
+            })}
+            {user && (
+              <div className="pt-2 mt-2 border-t border-border">
+                <button
+                  onClick={() => {
+                    setMobileMenuOpen(false);
+                    handleLogout();
+                  }}
+                  className="flex items-center gap-3 w-full rounded-lg px-4 py-3 text-base font-medium text-destructive hover:bg-destructive/10 transition-colors"
+                >
+                  <LogOut className="h-5 w-5" />
+                  로그아웃
+                </button>
+              </div>
+            )}
+            </nav>
+          </div>
+        </>
+      )}
     </header>
   );
 }
