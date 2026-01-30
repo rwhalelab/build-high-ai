@@ -45,6 +45,7 @@ export function AIChat({ category = 'chat', className }: AIChatProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { success, error: showError } = useToast();
   const [input, setInput] = useState('');
+  const [provider, setProvider] = useState<'google' | 'groq'>('google');
 
   const { messages, sendMessage, status, error } = useChat({
     onError: (error) => {
@@ -75,7 +76,7 @@ export function AIChat({ category = 'chat', className }: AIChatProps) {
       return;
     }
 
-    // 메시지 전송 (body만 전달)
+    // 메시지 전송 (body에 category와 provider 전달)
     await sendMessage(
       {
         text: trimmedInput,
@@ -83,6 +84,7 @@ export function AIChat({ category = 'chat', className }: AIChatProps) {
       {
         body: {
           category,
+          provider,
         },
       }
     );
@@ -113,12 +115,31 @@ export function AIChat({ category = 'chat', className }: AIChatProps) {
   return (
     <Card className={cn('flex flex-col h-full', className)}>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Bot className="h-5 w-5" />
-          AI 챗봇
-        </CardTitle>
+        <div className="flex items-center justify-between mb-2">
+          <CardTitle className="flex items-center gap-2">
+            <Bot className="h-5 w-5" />
+            AI 챗봇
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            <label htmlFor="provider-select" className="text-sm text-muted-foreground">
+              모델:
+            </label>
+            <select
+              id="provider-select"
+              value={provider}
+              onChange={(e) => setProvider(e.target.value as 'google' | 'groq')}
+              className="px-3 py-1.5 text-sm border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+            >
+              <option value="google">Google Gemini</option>
+              <option value="groq">Groq (Llama 3.3)</option>
+            </select>
+          </div>
+        </div>
         <CardDescription>
-          질문을 입력하시면 AI가 답변해드립니다. (gemini-3-flash-preview 모델 사용)
+          질문을 입력하시면 AI가 답변해드립니다.
+          {provider === 'google' 
+            ? ' (gemini-3-flash-preview 모델 사용)'
+            : ' (llama-3.3-70b-versatile 모델 사용)'}
         </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col flex-1 min-h-0">
