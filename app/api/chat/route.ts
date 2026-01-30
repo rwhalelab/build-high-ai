@@ -12,6 +12,7 @@ import { NextRequest } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
 import { streamText } from 'ai';
 import { createGoogleGenerativeAI } from '@ai-sdk/google';
+import { createGroq } from '@ai-sdk/groq';
 
 // streamText가 기대하는 메시지 타입 정의
 type Message = {
@@ -42,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { messages, category = 'chat' } = body;
+    const { messages, category = 'chat', provider = 'google' } = body;
 
     // 유효성 검사
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
@@ -110,22 +111,47 @@ export async function POST(request: NextRequest) {
 
     // 캐시 미스: 스트리밍 응답 생성
     try {
-      const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
+      let model: any;
       
-      if (!apiKey) {
-        return Response.json(
-          { 
-            error: 'API_KEY_MISSING',
-            message: 'AI 서비스 설정이 완료되지 않았습니다.' 
-          },
-          { status: 503 }
-        );
-      }
+      if (provider === 'groq') {
+        // Groq 사용
+        const apiKey = process.env.GROQ_API_KEY;
+        
+        if (!apiKey) {
+          return Response.json(
+            { 
+              error: 'API_KEY_MISSING',
+              message: 'Groq API 키가 설정되지 않았습니다.' 
+            },
+            { status: 503 }
+          );
+        }
 
-      // API 키를 포함한 커스텀 provider 인스턴스 생성
-      const googleAI = createGoogleGenerativeAI({
-        apiKey,
-      });
+        const groq = createGroq({
+          apiKey,
+        });
+        
+        model = groq('llama-3.3-70b-versatile');
+      } else {
+        // Google Gemini 사용 (기본값)
+        const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
+        
+        if (!apiKey) {
+          return Response.json(
+            { 
+              error: 'API_KEY_MISSING',
+              message: 'AI 서비스 설정이 완료되지 않았습니다.' 
+            },
+            { status: 503 }
+          );
+        }
+
+        const googleAI = createGoogleGenerativeAI({
+          apiKey,
+        });
+        
+        model = googleAI('gemini-3-flash-preview');
+      }
 
       // useChat이 전송하는 메시지를 Message 형식으로 변환
       const formattedMessages: Message[] = messages.map((msg: any) => {
@@ -178,7 +204,7 @@ export async function POST(request: NextRequest) {
       });
 
       const result = streamText({
-        model: googleAI('gemini-3-flash-preview'),
+        model,
         messages: formattedMessages,
         maxOutputTokens: 300,
         temperature: 0.7,
@@ -214,7 +240,9 @@ export async function POST(request: NextRequest) {
       }
 
       // API 키 없음 에러 처리
-      if (error.message?.includes('GOOGLE_GENERATIVE_AI_API_KEY') || error.message?.includes('API key')) {
+      if (error.message?.includes('GOOGLE_GENERATIVE_AI_API_KEY') || 
+          error.message?.includes('GROQ_API_KEY') ||
+          error.message?.includes('API key')) {
         return Response.json(
           { 
             error: 'API_KEY_MISSING',
