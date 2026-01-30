@@ -12,7 +12,7 @@ import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { useToast } from '@/components/ui/toast-provider';
-import { Loader2, Send, Bot, User } from 'lucide-react';
+import { Loader2, Send, Bot, User, Sparkles, Zap } from 'lucide-react';
 import { cn } from '@/lib/utils/cn';
 import ReactMarkdown from 'react-markdown';
 import { useRef, useEffect, useState } from 'react';
@@ -115,32 +115,64 @@ export function AIChat({ category = 'chat', className }: AIChatProps) {
   return (
     <Card className={cn('flex flex-col h-full', className)}>
       <CardHeader>
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex flex-col gap-4">
           <CardTitle className="flex items-center gap-2">
             <Bot className="h-5 w-5" />
             AI 챗봇
           </CardTitle>
-          <div className="flex items-center gap-2">
-            <label htmlFor="provider-select" className="text-sm text-muted-foreground">
-              모델:
+          
+          {/* 모델 선택 UI */}
+          <div className="flex flex-col gap-2">
+            <label className="text-sm font-medium text-foreground">
+              AI 모델 선택
             </label>
-            <select
-              id="provider-select"
-              value={provider}
-              onChange={(e) => setProvider(e.target.value as 'google' | 'groq')}
-              className="px-3 py-1.5 text-sm border border-border rounded-md bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
-            >
-              <option value="google">Google Gemini</option>
-              <option value="groq">Groq (Llama 3.3)</option>
-            </select>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setProvider('google')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all',
+                  provider === 'google'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                )}
+              >
+                <Sparkles className={cn(
+                  'h-4 w-4',
+                  provider === 'google' ? 'text-primary' : 'text-muted-foreground'
+                )} />
+                <div className="flex flex-col items-start">
+                  <span className="text-sm font-medium">Google Gemini</span>
+                  <span className="text-xs opacity-70">gemini-3-flash-preview</span>
+                </div>
+              </button>
+              
+              <button
+                type="button"
+                onClick={() => setProvider('groq')}
+                className={cn(
+                  'flex-1 flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 transition-all',
+                  provider === 'groq'
+                    ? 'border-primary bg-primary/10 text-primary'
+                    : 'border-border bg-background text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                )}
+              >
+                <Zap className={cn(
+                  'h-4 w-4',
+                  provider === 'groq' ? 'text-primary' : 'text-muted-foreground'
+                )} />
+                <div className="flex flex-col items-start">
+                  <span className="text-sm font-medium">Groq</span>
+                  <span className="text-xs opacity-70">llama-3.3-70b-versatile</span>
+                </div>
+              </button>
+            </div>
           </div>
+          
+          <CardDescription>
+            질문을 입력하시면 선택한 AI 모델이 답변해드립니다.
+          </CardDescription>
         </div>
-        <CardDescription>
-          질문을 입력하시면 AI가 답변해드립니다.
-          {provider === 'google' 
-            ? ' (gemini-3-flash-preview 모델 사용)'
-            : ' (llama-3.3-70b-versatile 모델 사용)'}
-        </CardDescription>
       </CardHeader>
       <CardContent className="flex flex-col flex-1 min-h-0">
         {/* 메시지 영역 */}
