@@ -1,8 +1,11 @@
 /**
- * Google Gemini API 연동
+ * AI API 연동 (Groq & Google Gemini)
  * 
- * 게시글 본문을 분석하여 요약문(3줄)과 기술 태그(5개)를 생성
- * AI 챗봇 기능: 사용자 질문에 대한 응답 생성 및 DB 저장
+ * 게시글 본문 분석: Groq llama-3.3-70b-versatile 모델 사용
+ * - 게시글 본문을 분석하여 요약문(3줄)과 기술 태그(5개)를 생성
+ * 
+ * AI 챗봇 기능: Google Gemini API 사용
+ * - 사용자 질문에 대한 응답 생성 및 DB 저장
  */
 
 interface AIGenerationResult {
@@ -73,14 +76,10 @@ function cleanAIResponse(text: string): string {
 export async function generateSummaryAndTags(
   content: string
 ): Promise<AIGenerationResult> {
-  // TODO: Gemini API 호출 구현
-  // TODO: 프롬프트 엔지니어링으로 요약 및 태그 추출
-  // TODO: 에러 처리 및 재시도 로직
-  
   try {
-    const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
+    const apiKey = process.env.GROQ_API_KEY;
     if (!apiKey) {
-      console.warn('GOOGLE_GENERATIVE_AI_API_KEY가 설정되지 않았습니다. 기본값을 사용합니다.');
+      console.warn('GROQ_API_KEY가 설정되지 않았습니다. 기본값을 사용합니다.');
       // API 키가 없을 때 기본값 반환
       return {
         summary: ['요약을 생성할 수 없습니다.', '', ''],
@@ -88,20 +87,25 @@ export async function generateSummaryAndTags(
       };
     }
 
-    // 임시 구현 (실제 API 연동 필요)
+    // Groq API 호출 (llama-3.3-70b-versatile 모델 사용)
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`,
+      'https://api.groq.com/openai/v1/chat/completions',
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
-          contents: [
+          model: 'llama-3.3-70b-versatile',
+          messages: [
             {
-              parts: [
-                {
-                  text: `다음 게시글을 분석하여 JSON 형식으로 응답해주세요:
+              role: 'system',
+              content: '당신은 게시글을 분석하여 요약과 기술 태그를 추출하는 전문가입니다. 응답은 반드시 유효한 JSON 형식으로만 제공하세요.',
+            },
+            {
+              role: 'user',
+              content: `다음 게시글을 분석하여 JSON 형식으로 응답해주세요:
 {
   "summary": ["요약문 1줄", "요약문 2줄", "요약문 3줄"],
   "tags": ["기술1", "기술2", "기술3", "기술4", "기술5"]
@@ -110,13 +114,15 @@ export async function generateSummaryAndTags(
 요구사항:
 - summary: 게시글의 핵심 내용을 3줄로 요약 (각 줄은 독립적인 문장, 50자 이내)
 - tags: 게시글에서 언급된 기술 스택이나 도구를 5개 추출 (프로그래밍 언어, 프레임워크, 라이브러리, 도구 등)
+- 응답은 반드시 JSON 형식만 제공하고, 추가 설명이나 마크다운 코드 블록 없이 순수 JSON만 반환하세요.
 
 게시글 내용:
-${content.substring(0, 5000)}`, // Gemini API 토큰 제한 고려
-                },
-              ],
+${content.substring(0, 5000)}`, // 토큰 제한 고려
             },
           ],
+          temperature: 0.7,
+          max_tokens: 500,
+          response_format: { type: 'json_object' }, // JSON 모드 강제
         }),
       }
     );
@@ -131,16 +137,16 @@ ${content.substring(0, 5000)}`, // Gemini API 토큰 제한 고려
         errorData = JSON.parse(errorText);
       } catch (parseError) {
         // JSON 파싱 실패 시 원본 텍스트 사용
-        console.error('[Gemini API] 에러 응답 파싱 실패:', parseError);
-        console.error('[Gemini API] 원본 에러 응답:', errorText);
+        console.error('[Groq API] 에러 응답 파싱 실패:', parseError);
+        console.error('[Groq API] 원본 에러 응답:', errorText);
       }
       
       // 상세한 에러 정보 로깅
-      console.error('[Gemini API] HTTP 상태:', response.status);
-      console.error('[Gemini API] 에러 응답:', errorData);
-      console.error('[Gemini API] 원본 응답 텍스트:', errorText);
+      console.error('[Groq API] HTTP 상태:', response.status);
+      console.error('[Groq API] 에러 응답:', errorData);
+      console.error('[Groq API] 원본 응답 텍스트:', errorText);
       
-      const errorMessage = errorData.error?.message || errorData.message || `Gemini API 오류: ${response.status}`;
+      const errorMessage = errorData.error?.message || errorData.message || `Groq API 오류: ${response.status}`;
       
       // 할당량 초과 에러 처리
       if (errorMessage.includes('quota') || errorMessage.includes('Quota') || errorMessage.includes('429') || response.status === 429) {
@@ -150,8 +156,8 @@ ${content.substring(0, 5000)}`, // Gemini API 토큰 제한 고려
       // 503 오류의 경우 더 자세한 정보 포함
       if (response.status === 503) {
         const detailedError = errorData.error 
-          ? `Gemini API 서비스 일시 중단 (503): ${errorData.error.message || '서버가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요.'}`
-          : `Gemini API 서비스 일시 중단 (503): ${errorText || '서버가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요.'}`;
+          ? `Groq API 서비스 일시 중단 (503): ${errorData.error.message || '서버가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요.'}`
+          : `Groq API 서비스 일시 중단 (503): ${errorText || '서버가 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해주세요.'}`;
         throw new Error(detailedError);
       }
       
@@ -160,39 +166,46 @@ ${content.substring(0, 5000)}`, // Gemini API 토큰 제한 고려
 
     const data = await response.json();
     
-    // 응답 파싱 - 모든 parts에서 텍스트 추출
-    const candidate = data.candidates?.[0];
-    if (!candidate || !candidate.content || !candidate.content.parts) {
+    // Groq API 응답 파싱
+    const choice = data.choices?.[0];
+    if (!choice || !choice.message || !choice.message.content) {
       throw new Error('AI 응답 구조가 올바르지 않습니다.');
     }
     
-    // 모든 parts의 텍스트를 합치기
-    let text = candidate.content.parts
-      .map((part: any) => part.text || '')
-      .join('')
-      .trim();
+    let text = choice.message.content.trim();
     
     if (!text) {
       throw new Error('AI 응답이 비어있습니다.');
     }
     
-    // 내부 노트 및 시스템 메시지 제거
-    text = cleanAIResponse(text);
-
-    // JSON 형식으로 파싱 시도
+    // Groq API는 response_format: { type: 'json_object' }를 사용하면 JSON 형식으로 반환됨
+    // 먼저 직접 JSON 파싱 시도
     let summary: string[] = [];
     let tags: string[] = [];
 
     try {
-      // JSON 형식 응답 파싱 시도
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
+      // 직접 JSON 파싱 시도 (Groq API는 JSON 형식으로 반환)
+      let parsed: any = null;
+      try {
+        parsed = JSON.parse(text);
+      } catch (directParseError) {
+        // 직접 파싱 실패 시 JSON 객체 추출 시도
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          parsed = JSON.parse(jsonMatch[0]);
+        }
+      }
+      
+      if (parsed) {
+        // JSON 파싱 성공
         summary = Array.isArray(parsed.summary) ? parsed.summary : 
                   parsed.summary ? [parsed.summary] : [];
         tags = Array.isArray(parsed.tags) ? parsed.tags : 
                parsed.tags ? [parsed.tags] : [];
       } else {
+        // JSON 파싱 실패 시 텍스트 형식 응답 파싱
+        // 내부 노트 및 시스템 메시지 제거
+        text = cleanAIResponse(text);
         // 텍스트 형식 응답 파싱
         // 요약문 추출 (번호나 줄바꿈으로 구분)
         const summaryLines = text
@@ -229,7 +242,8 @@ ${content.substring(0, 5000)}`, // Gemini API 토큰 제한 고려
         tags = foundTags.slice(0, 5);
       }
     } catch (parseError) {
-      console.error('응답 파싱 오류:', parseError);
+      console.error('[Groq API] 응답 파싱 오류:', parseError);
+      console.error('[Groq API] 원본 응답:', text);
       // 파싱 실패 시 기본값 사용
     }
 
@@ -253,7 +267,7 @@ ${content.substring(0, 5000)}`, // Gemini API 토큰 제한 고려
 
     return { summary, tags };
   } catch (error) {
-    console.error('AI 생성 오류:', error);
+    console.error('[Groq API] AI 생성 오류:', error);
     // 에러 발생 시 기본값 반환
     return {
       summary: ['요약을 생성할 수 없습니다.', '', ''],
