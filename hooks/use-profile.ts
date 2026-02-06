@@ -33,6 +33,13 @@ export function useProfile() {
       const { data: { user }, error: authError } = await supabase.auth.getUser();
       
       if (authError) {
+        // Refresh token 에러인 경우 세션 클리어
+        if (authError.message?.includes('refresh_token_not_found') || 
+            authError.message?.includes('Invalid Refresh Token') ||
+            authError.status === 400) {
+          console.log('유효하지 않은 세션, 로그아웃 처리');
+          await supabase.auth.signOut();
+        }
         console.error('인증 확인 오류:', authError);
         setProfile(null);
         setLoading(false);
@@ -95,7 +102,18 @@ export function useProfile() {
         throw new Error('Supabase 환경 변수가 설정되지 않았습니다.');
       }
 
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { user }, error: authError } = await supabase.auth.getUser();
+      
+      if (authError) {
+        // Refresh token 에러인 경우 세션 클리어
+        if (authError.message?.includes('refresh_token_not_found') || 
+            authError.message?.includes('Invalid Refresh Token') ||
+            authError.status === 400) {
+          await supabase.auth.signOut();
+        }
+        throw new Error('인증되지 않았습니다.');
+      }
+      
       if (!user) throw new Error('인증되지 않았습니다.');
 
       // 낙관적 업데이트: UI 즉시 반영

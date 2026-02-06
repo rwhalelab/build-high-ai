@@ -3,11 +3,12 @@ import { Zap } from "lucide-react";
 
 /**
  * PRD §4 메뉴 구성에 맞춘 푸터 링크
- * - 팀 찾기 (Discovery), 모집글 작성 (Creation), 마이페이지
+ * - 팀 찾기 (Discovery), 모집글 작성 (Creation), AI 챗봇, 마이페이지
  */
 const FOOTER_LINKS = [
   { href: "/", label: "팀 찾기" },
   { href: "/posts/new", label: "모집글 작성" },
+  { href: "/ai/chat", label: "AI 챗봇" },
   { href: "/profile", label: "마이페이지" },
 ] as const;
 

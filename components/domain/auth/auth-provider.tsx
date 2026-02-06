@@ -42,6 +42,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const { data: { session }, error } = await supabase.auth.getSession();
         
         if (error) {
+          // Refresh token 에러인 경우 세션 클리어
+          if (error.message?.includes('refresh_token_not_found') || 
+              error.message?.includes('Invalid Refresh Token') ||
+              error.status === 400) {
+            console.log('유효하지 않은 세션, 로그아웃 처리');
+            await supabase.auth.signOut();
+            setUser(null);
+            setLoading(false);
+            return;
+          }
           console.error('세션 조회 오류:', error);
           setUser(null);
           setLoading(false);
